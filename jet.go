@@ -47,7 +47,10 @@ func (j *jet) Query(v interface{}, query string, args ...interface{}) error {
 		for i, col := range cols {
 			m[col] = containers[i]
 		}
-		return mapper{m}.unpack(v)
+		err = mapper{m}.unpack(v)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
