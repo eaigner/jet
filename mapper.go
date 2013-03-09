@@ -19,22 +19,23 @@ func (m mapper) unpack(v interface{}) error {
 }
 
 func (m mapper) unpackValue(pv reflect.Value) error {
-	iv := reflect.Indirect(pv)
-	switch iv.Kind() {
+	switch pv.Kind() {
+	case reflect.Ptr:
+		return m.unpackValue(reflect.Indirect(pv))
 	case reflect.Struct:
 		return m.unpackStruct(pv)
 	case reflect.Map:
 		return m.unpackMap(pv)
 	case reflect.Slice:
-		sv := reflect.New(iv.Type().Elem())
+		sv := reflect.New(pv.Type().Elem())
 		err := m.unpackValue(sv)
 		if err != nil {
 			return err
 		}
-		iv.Set(reflect.Append(iv, sv.Elem()))
+		pv.Set(reflect.Append(pv, sv.Elem()))
 		return nil
 	}
-	return fmt.Errorf("cannot unpack result to Run(%s %s)", pv.Type().String(), iv.Kind())
+	return fmt.Errorf("cannot unpack result to Run(%s %s)", pv.Type().String(), pv.Kind())
 }
 
 func (m mapper) unpackStruct(pv reflect.Value) error {
