@@ -1,2 +1,1 @@
-jet
-===
+Jet is a super-flexible lightweight SQL interface
