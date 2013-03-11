@@ -25,11 +25,15 @@ func TestUnpackStruct(t *testing.T) {
 		"ab_c": int64(9),
 		"c_d":  "hello",
 		"e":    "unsettable",
+		"f":    []uint8("uint8str"),
+		"g":    []uint8("uint8data"),
 	}
 	type out struct {
 		AbC int64
 		CD  string
 		e   string
+		F   string
+		G   []byte
 	}
 
 	// Unpack struct
@@ -49,6 +53,12 @@ func TestUnpackStruct(t *testing.T) {
 		t.Fatal(x)
 	}
 	if x := v.e; x != "" {
+		t.Fatal(x)
+	}
+	if x := v.F; x != "uint8str" {
+		t.Fatal(x)
+	}
+	if x := v.G; string(x) != "uint8data" {
 		t.Fatal(x)
 	}
 }

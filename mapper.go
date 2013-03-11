@@ -39,12 +39,22 @@ func (m mapper) unpackValue(pv reflect.Value) error {
 }
 
 func (m mapper) unpackStruct(pv reflect.Value) error {
-	v := reflect.Indirect(pv)
-	for col, val := range m.columns {
-		name := columnToFieldName(col)
-		field := v.FieldByName(name)
+	iv := reflect.Indirect(pv)
+	for k, v := range m.columns {
+		name := columnToFieldName(k)
+		field := iv.FieldByName(name)
 		if field.IsValid() {
-			field.Set(reflect.ValueOf(val))
+			target := reflect.Indirect(reflect.ValueOf(v)).Interface()
+			switch t := target.(type) {
+			case []uint8:
+				if field.Kind() == reflect.String {
+					field.SetString(string(t))
+				} else {
+					field.Set(reflect.ValueOf(target))
+				}
+			default:
+				field.Set(reflect.ValueOf(target))
+			}
 		}
 	}
 	return nil
@@ -55,7 +65,7 @@ func (m mapper) unpackMap(pv reflect.Value) error {
 	mv := reflect.MakeMap(iv.Type())
 	iv.Set(mv)
 	for k, v := range m.columns {
-		iv.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v))
+		iv.SetMapIndex(reflect.ValueOf(k), reflect.Indirect(reflect.ValueOf(v)))
 	}
 	return nil
 }

@@ -5,7 +5,7 @@ import (
 )
 
 type tx struct {
-	db *sql.DB
+	godb *sql.DB
 }
 
 func (t *tx) Commit() error {

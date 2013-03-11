@@ -4,25 +4,29 @@ import (
 	"database/sql"
 )
 
-func Open(driverName, dataSourceName string) (Jet, error) {
-	db, err := sql.Open(driverName, dataSourceName)
+func Open(driverName, dataSourceName string) (Db, error) {
+	godb, err := sql.Open(driverName, dataSourceName)
 	if err != nil {
 		return nil, err
 	}
-	return &jet{db: db}, nil
+	return &db{godb: godb}, nil
 }
 
-type jet struct {
-	db *sql.DB
+type db struct {
+	godb *sql.DB
 }
 
-func (j *jet) Begin() Tx {
-	return &tx{db: j.db}
+func (j *db) Begin() Tx {
+	return &tx{godb: j.godb}
 }
 
-func (j *jet) Query(v interface{}, query string, args ...interface{}) error {
+func (j *db) Exec(query string, args ...interface{}) error {
+	return j.Query(nil, query, args...)
+}
+
+func (j *db) Query(v interface{}, query string, args ...interface{}) error {
 	// Query
-	rows, err := j.db.Query(query, args...)
+	rows, err := j.godb.Query(query, args...)
 	if err != nil {
 		return err
 	}
@@ -55,6 +59,6 @@ func (j *jet) Query(v interface{}, query string, args ...interface{}) error {
 	return nil
 }
 
-func (j *jet) Count() int64 {
-	return 0
+func (j *db) Count() int64 {
+	panic("not implemented")
 }
