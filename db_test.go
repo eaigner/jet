@@ -35,4 +35,22 @@ func TestQuery(t *testing.T) {
 	if x := sv.A; x != "hello2" {
 		t.Fatal(x)
 	}
+	type data struct {
+		A string
+		B int64
+	}
+	var sv2 []data
+	err = db.Query(&sv2, `SELECT * FROM "table"`)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if x := len(sv2); x != 2 {
+		t.Fatal(x)
+	}
+	if x := sv2[0]; x.A != "hello" || x.B != 7 {
+		t.Fatal(x)
+	}
+	if x := sv2[1]; x.A != "hello2" || x.B != 8 {
+		t.Fatal(x)
+	}
 }
