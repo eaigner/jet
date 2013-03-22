@@ -48,9 +48,13 @@ func (j *db) Rows(v interface{}, maxRows ...int64) error {
 		return err
 	}
 	var i int64 = 0
-	for rows.Next() {
+	for {
 		// Check if max rows has been reached
 		if max >= 0 && i >= max {
+			break
+		}
+		// Break if no more rows
+		if !rows.Next() {
 			break
 		}
 		// Scan values into containers
