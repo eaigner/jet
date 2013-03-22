@@ -29,6 +29,9 @@ func TestDb(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+	if x := len(mv); x != 1 {
+		t.Fatal("wrong map len", x, mv)
+	}
 	x, ok := mv["a"].([]uint8)
 	if !ok || string(x) != "hello" {
 		t.Fatal(x)
@@ -51,7 +54,7 @@ func TestDb(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	if x := len(sv2); x != 2 {
-		t.Fatal(x)
+		t.Fatal(x, sv2)
 	}
 	if x := sv2[0]; x.A != "hello" || x.B != 7 {
 		t.Fatal(x)
@@ -70,5 +73,13 @@ func TestDb(t *testing.T) {
 	if x := sv3[0]; x.A != "hello" || x.B != 7 {
 		t.Fatal(x)
 	}
-	// t.Fail()
+
+	// Test Value()
+	v, err := db.Query(`INSERT INTO "table" ( "a", "b" ) VALUES ( $1, $2 ) RETURNING "b"`, "hellov", 101).Value()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if x, ok := v.(int64); !ok || x != 101 {
+		t.Fatalf("invalid value: ta: %t, %v (%T)", ok, v, v)
+	}
 }

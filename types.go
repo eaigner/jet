@@ -35,6 +35,8 @@ type Queryable interface {
 	Run() error
 	// Rows runs the query writing the rows to the specified map or struct array. If maxRows is specified, only writes up to maxRows rows.
 	Rows(v interface{}, maxRows ...int64) error
+	// Value returns the value of the first row and column returned. This is useful for e.g. fetching aggregated values.
+	Value() (interface{}, error)
 	// Logger returns the current logger
 	Logger() *Logger
 	// SetLogger sets a logger
