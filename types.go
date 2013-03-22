@@ -11,14 +11,17 @@ type MigrationSuite interface {
 }
 
 type Db interface {
+	Queryable
 	Begin() Tx
-	Query(query string, args ...interface{}) Db
-	Run() error
-	Rows(v interface{}, maxRows ...int64) error
-	Count() int64
 }
 
 type Tx interface {
+	Queryable
 	Commit() error
-	Query(sql string, args ...interface{}) error
+}
+
+type Queryable interface {
+	Query(query string, args ...interface{}) Queryable
+	Run() error
+	Rows(v interface{}, maxRows ...int64) error
 }

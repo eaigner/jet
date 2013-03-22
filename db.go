@@ -22,7 +22,7 @@ func (j *db) Begin() Tx {
 	return &tx{godb: j.godb}
 }
 
-func (j *db) Query(query string, args ...interface{}) Db {
+func (j *db) Query(query string, args ...interface{}) Queryable {
 	j.query = query
 	j.args = args
 	return j
@@ -76,8 +76,4 @@ func (j *db) Rows(v interface{}, maxRows ...int64) error {
 		i++
 	}
 	return nil
-}
-
-func (j *db) Count() int64 {
-	panic("not implemented")
 }
