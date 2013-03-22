@@ -13,7 +13,7 @@ type tx struct {
 
 func (t *tx) Commit() error {
 	if l := t.Logger(); l != nil {
-		l.Actionf("COMMIT TRANSACTON %s", t.id)
+		l.Txnf("COMMIT\t%s", t.id).Println()
 	}
 	return t.appendError(t.tx.Commit())
 }
@@ -24,6 +24,7 @@ func (t *tx) Query(query string, args ...interface{}) Queryable {
 		query:  query,
 		args:   args,
 		logger: t.runner.logger,
+		txnId:  t.id,
 	}
 	return t
 }

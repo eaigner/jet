@@ -6,6 +6,7 @@ import (
 
 type runner struct {
 	qo     queryObject
+	txnId  string
 	query  string
 	args   []interface{}
 	logger *Logger
@@ -98,6 +99,9 @@ func (r *runner) SetLogger(l *Logger) {
 
 func (r *runner) logQuery() {
 	if l := r.Logger(); l != nil {
-		l.Queryf(r.query)
+		if r.txnId != "" {
+			l.Txnf("\t%s: ", r.txnId[:6])
+		}
+		l.Queryf(r.query).Println()
 	}
 }

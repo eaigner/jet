@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 )
 
 type Logger struct {
-	Logger      *log.Logger
-	ActionColor string
-	QueryColor  string
-	ResetColor  string
+	Logger     *log.Logger
+	QueryColor string
+	TxnColor   string
+	ResetColor string
+	parts      []string
 }
 
 func NewLogger(file *os.File) *Logger {
@@ -18,17 +20,25 @@ func NewLogger(file *os.File) *Logger {
 		file = os.Stdout
 	}
 	return &Logger{
-		Logger:      log.New(file, "SQL: ", log.LstdFlags),
-		ActionColor: "\x1b[36m",
-		QueryColor:  "\x1b[35m",
-		ResetColor:  "\x1b[0m",
+		Logger:     log.New(file, "SQL: ", log.LstdFlags),
+		QueryColor: "\x1b[35m",
+		TxnColor:   "\x1b[36m",
+		ResetColor: "\x1b[0m",
+		parts:      []string{},
 	}
 }
 
-func (l *Logger) Actionf(format string, args ...interface{}) {
-	l.Logger.Printf("%s%s%s", l.ActionColor, fmt.Sprintf(format, args...), l.ResetColor)
+func (l *Logger) Queryf(format string, args ...interface{}) *Logger {
+	l.parts = append(l.parts, fmt.Sprintf("%s%s%s", l.QueryColor, fmt.Sprintf(format, args...), l.ResetColor))
+	return l
 }
 
-func (l *Logger) Queryf(format string, args ...interface{}) {
-	l.Logger.Printf("%s%s%s", l.QueryColor, fmt.Sprintf(format, args...), l.ResetColor)
+func (l *Logger) Txnf(format string, args ...interface{}) *Logger {
+	l.parts = append(l.parts, fmt.Sprintf("%s%s%s", l.TxnColor, fmt.Sprintf(format, args...), l.ResetColor))
+	return l
+}
+
+func (l *Logger) Println() {
+	l.Logger.Println(strings.Join(l.parts, ""))
+	l.parts = []string{}
 }
