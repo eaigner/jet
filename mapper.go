@@ -13,7 +13,7 @@ type mapper struct {
 func (m mapper) unpack(v interface{}) error {
 	vt := reflect.TypeOf(v)
 	if vt.Kind() != reflect.Ptr {
-		return fmt.Errorf("cannot unpack result to Run(non-pointer %s)", vt.String())
+		return fmt.Errorf("cannot unpack result to non-pointer (%s)", vt.String())
 	}
 	return m.unpackValue(reflect.ValueOf(v))
 }
@@ -35,7 +35,7 @@ func (m mapper) unpackValue(pv reflect.Value) error {
 		pv.Set(reflect.Append(pv, sv.Elem()))
 		return nil
 	}
-	return fmt.Errorf("cannot unpack result to Run(%s %s)", pv.Type().String(), pv.Kind())
+	return fmt.Errorf("cannot unpack result to %s (%s)", pv.Type().String(), pv.Kind())
 }
 
 func (m mapper) unpackStruct(pv reflect.Value) error {
