@@ -5,8 +5,8 @@ import (
 )
 
 type tx struct {
+	runner
 	tx     *sql.Tx
-	runner *runner
 	errors []error
 }
 
@@ -15,7 +15,7 @@ func (t *tx) Commit() error {
 }
 
 func (t *tx) Query(query string, args ...interface{}) Queryable {
-	t.runner = &runner{
+	t.runner = runner{
 		qo:    t.tx,
 		query: query,
 		args:  args,

@@ -13,8 +13,8 @@ func Open(driverName, dataSourceName string) (Db, error) {
 }
 
 type db struct {
-	db     *sql.DB
-	runner *runner
+	runner
+	db *sql.DB
 }
 
 func (d *db) Begin() (Tx, error) {
@@ -26,18 +26,10 @@ func (d *db) Begin() (Tx, error) {
 }
 
 func (d *db) Query(query string, args ...interface{}) Queryable {
-	d.runner = &runner{
+	d.runner = runner{
 		qo:    d.db,
 		query: query,
 		args:  args,
 	}
 	return d
-}
-
-func (d *db) Run() error {
-	return d.runner.Run()
-}
-
-func (d *db) Rows(v interface{}, maxRows ...int64) error {
-	return d.runner.Rows(v, maxRows...)
 }
