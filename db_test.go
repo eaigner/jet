@@ -10,16 +10,16 @@ func TestQuery(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	err = db.Exec(`DROP TABLE IF EXISTS "table"`)
+	err = db.Query(`DROP TABLE IF EXISTS "table"`).Run()
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = db.Exec(`CREATE TABLE "table" ( "a" text, "b" integer )`)
+	err = db.Query(`CREATE TABLE "table" ( "a" text, "b" integer )`).Run()
 	if err != nil {
 		t.Fatal(err.Error())
 	}
 	var mv map[string]interface{}
-	err = db.Query(&mv, `INSERT INTO "table" ( "a", "b" ) VALUES ( $1, $2 ) RETURNING "a"`, "hello", 7)
+	err = db.Query(`INSERT INTO "table" ( "a", "b" ) VALUES ( $1, $2 ) RETURNING "a"`, "hello", 7).Rows(&mv)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -28,7 +28,7 @@ func TestQuery(t *testing.T) {
 		t.Fatal(x)
 	}
 	var sv struct{ A string }
-	err = db.Query(&sv, `INSERT INTO "table" ( "a", "b" ) VALUES ( $1, $2 ) RETURNING "a"`, "hello2", 8)
+	err = db.Query(`INSERT INTO "table" ( "a", "b" ) VALUES ( $1, $2 ) RETURNING "a"`, "hello2", 8).Rows(&sv)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -40,7 +40,7 @@ func TestQuery(t *testing.T) {
 		B int64
 	}
 	var sv2 []data
-	err = db.Query(&sv2, `SELECT * FROM "table"`)
+	err = db.Query(`SELECT * FROM "table"`).Rows(&sv2)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -51,6 +51,17 @@ func TestQuery(t *testing.T) {
 		t.Fatal(x)
 	}
 	if x := sv2[1]; x.A != "hello2" || x.B != 8 {
+		t.Fatal(x)
+	}
+	var sv3 []data
+	err = db.Query(`SELECT * FROM "table"`).Rows(&sv3, 1)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if x := len(sv3); x != 1 {
+		t.Fatal(x)
+	}
+	if x := sv3[0]; x.A != "hello" || x.B != 7 {
 		t.Fatal(x)
 	}
 }

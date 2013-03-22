@@ -13,20 +13,33 @@ func Open(driverName, dataSourceName string) (Db, error) {
 }
 
 type db struct {
-	godb *sql.DB
+	godb  *sql.DB
+	query string
+	args  []interface{}
 }
 
 func (j *db) Begin() Tx {
 	return &tx{godb: j.godb}
 }
 
-func (j *db) Exec(query string, args ...interface{}) error {
-	return j.Query(nil, query, args...)
+func (j *db) Query(query string, args ...interface{}) Db {
+	j.query = query
+	j.args = args
+	return j
 }
 
-func (j *db) Query(v interface{}, query string, args ...interface{}) error {
+func (j *db) Run() error {
+	return j.Rows(nil)
+}
+
+func (j *db) Rows(v interface{}, maxRows ...int64) error {
+	// Determine max rows
+	var max int64 = -1
+	if len(maxRows) > 0 {
+		max = maxRows[0]
+	}
 	// Query
-	rows, err := j.godb.Query(query, args...)
+	rows, err := j.godb.Query(j.query, j.args...)
 	if err != nil {
 		return err
 	}
@@ -34,12 +47,17 @@ func (j *db) Query(v interface{}, query string, args ...interface{}) error {
 	if err != nil {
 		return err
 	}
+	var i int64 = 0
 	for rows.Next() {
+		// Check if max rows has been reached
+		if max >= 0 && i >= max {
+			break
+		}
 		// Scan values into containers
 		containers := make([]interface{}, 0, len(cols))
 		for i := 0; i < cap(containers); i++ {
-			var v interface{}
-			containers = append(containers, &v)
+			var cv interface{}
+			containers = append(containers, &cv)
 		}
 		err := rows.Scan(containers...)
 		if err != nil {
@@ -55,6 +73,7 @@ func (j *db) Query(v interface{}, query string, args ...interface{}) error {
 		if err != nil {
 			return err
 		}
+		i++
 	}
 	return nil
 }

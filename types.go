@@ -12,8 +12,9 @@ type MigrationSuite interface {
 
 type Db interface {
 	Begin() Tx
-	Exec(query string, args ...interface{}) error
-	Query(v interface{}, query string, args ...interface{}) error
+	Query(query string, args ...interface{}) Db
+	Run() error
+	Rows(v interface{}, maxRows ...int64) error
 	Count() int64
 }
 
