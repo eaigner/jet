@@ -5,21 +5,28 @@ import (
 )
 
 type tx struct {
-	godb *sql.DB
+	tx     *sql.Tx
+	runner *runner
+	errors []error
 }
 
 func (t *tx) Commit() error {
-	return nil
+	panic("not implemented")
 }
 
 func (t *tx) Query(query string, args ...interface{}) Queryable {
-	panic("not implemented")
+	t.runner = &runner{
+		qo:    t.tx,
+		query: query,
+		args:  args,
+	}
+	return t
 }
 
 func (t *tx) Run() error {
-	panic("not implemented")
+	return t.runner.Run()
 }
 
 func (t *tx) Rows(v interface{}, maxRows ...int64) error {
-	panic("not implemented")
+	return t.runner.Rows(v, maxRows...)
 }

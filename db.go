@@ -5,79 +5,39 @@ import (
 )
 
 func Open(driverName, dataSourceName string) (Db, error) {
-	godb, err := sql.Open(driverName, dataSourceName)
+	db2, err := sql.Open(driverName, dataSourceName)
 	if err != nil {
 		return nil, err
 	}
-	return &db{godb: godb}, nil
+	return &db{db: db2}, nil
 }
 
 type db struct {
-	godb  *sql.DB
-	query string
-	args  []interface{}
+	db     *sql.DB
+	runner *runner
 }
 
-func (j *db) Begin() Tx {
-	return &tx{godb: j.godb}
-}
-
-func (j *db) Query(query string, args ...interface{}) Queryable {
-	j.query = query
-	j.args = args
-	return j
-}
-
-func (j *db) Run() error {
-	return j.Rows(nil)
-}
-
-func (j *db) Rows(v interface{}, maxRows ...int64) error {
-	// Determine max rows
-	var max int64 = -1
-	if len(maxRows) > 0 {
-		max = maxRows[0]
-	}
-	// Query
-	rows, err := j.godb.Query(j.query, j.args...)
+func (d *db) Begin() (Tx, error) {
+	tx2, err := d.db.Begin()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	cols, err := rows.Columns()
-	if err != nil {
-		return err
-	}
-	var i int64 = 0
-	for {
-		// Check if max rows has been reached
-		if max >= 0 && i >= max {
-			break
-		}
-		// Break if no more rows
-		if !rows.Next() {
-			break
-		}
-		// Scan values into containers
-		containers := make([]interface{}, 0, len(cols))
-		for i := 0; i < cap(containers); i++ {
-			var cv interface{}
-			containers = append(containers, &cv)
-		}
-		err := rows.Scan(containers...)
-		if err != nil {
-			return err
-		}
+	return &tx{tx: tx2}, nil
+}
 
-		// Map values
-		m := make(map[string]interface{}, len(cols))
-		for i, col := range cols {
-			m[col] = containers[i]
-		}
-		err = mapper{m}.unpack(v)
-		if err != nil {
-			return err
-		}
-		i++
+func (d *db) Query(query string, args ...interface{}) Queryable {
+	d.runner = &runner{
+		qo:    d.db,
+		query: query,
+		args:  args,
 	}
-	return nil
+	return d
+}
+
+func (d *db) Run() error {
+	return d.runner.Run()
+}
+
+func (d *db) Rows(v interface{}, maxRows ...int64) error {
+	return d.runner.Rows(v, maxRows...)
 }
