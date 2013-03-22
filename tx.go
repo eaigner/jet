@@ -24,7 +24,7 @@ func (t *tx) Query(query string, args ...interface{}) Queryable {
 }
 
 func (t *tx) Run() error {
-	return t.runner.Run()
+	return t.appendError(t.runner.Run())
 }
 
 func (t *tx) Rows(v interface{}, maxRows ...int64) error {
@@ -42,7 +42,6 @@ func (t *tx) appendError(err error) error {
 		} else {
 			t.errors = append(t.errors, err)
 		}
-
 	}
 	return err
 }
