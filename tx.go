@@ -11,7 +11,7 @@ type tx struct {
 }
 
 func (t *tx) Commit() error {
-	panic("not implemented")
+	return t.appendError(t.tx.Commit())
 }
 
 func (t *tx) Query(query string, args ...interface{}) Queryable {
@@ -28,5 +28,21 @@ func (t *tx) Run() error {
 }
 
 func (t *tx) Rows(v interface{}, maxRows ...int64) error {
-	return t.runner.Rows(v, maxRows...)
+	return t.appendError(t.runner.Rows(v, maxRows...))
+}
+
+func (t *tx) Errors() []error {
+	return t.errors
+}
+
+func (t *tx) appendError(err error) error {
+	if err != nil {
+		if t.errors == nil {
+			t.errors = []error{err}
+		} else {
+			t.errors = append(t.errors, err)
+		}
+
+	}
+	return err
 }
