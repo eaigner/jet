@@ -22,14 +22,23 @@ func (d *db) Begin() (Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &tx{tx: tx2}, nil
+	t := &tx{
+		tx: tx2,
+		id: newAlphanumericId(40),
+	}
+	if l := d.Logger(); l != nil {
+		t.SetLogger(l)
+		l.Actionf("BEGIN TRANSACTON  %s", t.id)
+	}
+	return t, nil
 }
 
 func (d *db) Query(query string, args ...interface{}) Queryable {
 	d.runner = runner{
-		qo:    d.db,
-		query: query,
-		args:  args,
+		qo:     d.db,
+		query:  query,
+		args:   args,
+		logger: d.runner.logger,
 	}
 	return d
 }

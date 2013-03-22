@@ -1,9 +1,10 @@
 package jet
 
 type runner struct {
-	qo    queryObject
-	query string
-	args  []interface{}
+	qo     queryObject
+	query  string
+	args   []interface{}
+	logger *Logger
 }
 
 func (r *runner) Query(query string, args ...interface{}) Queryable {
@@ -22,6 +23,8 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 	if len(maxRows) > 0 {
 		max = maxRows[0]
 	}
+	// Log
+	r.logQuery()
 	// Query
 	rows, err := r.qo.Query(r.query, r.args...)
 	if err != nil {
@@ -64,4 +67,18 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 		i++
 	}
 	return nil
+}
+
+func (r *runner) Logger() *Logger {
+	return r.logger
+}
+
+func (r *runner) SetLogger(l *Logger) {
+	r.logger = l
+}
+
+func (r *runner) logQuery() {
+	if l := r.Logger(); l != nil {
+		l.Queryf(r.query)
+	}
 }

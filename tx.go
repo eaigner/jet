@@ -7,18 +7,23 @@ import (
 type tx struct {
 	runner
 	tx     *sql.Tx
+	id     string
 	errors []error
 }
 
 func (t *tx) Commit() error {
+	if l := t.Logger(); l != nil {
+		l.Actionf("COMMIT TRANSACTON %s", t.id)
+	}
 	return t.appendError(t.tx.Commit())
 }
 
 func (t *tx) Query(query string, args ...interface{}) Queryable {
 	t.runner = runner{
-		qo:    t.tx,
-		query: query,
-		args:  args,
+		qo:     t.tx,
+		query:  query,
+		args:   args,
+		logger: t.runner.logger,
 	}
 	return t
 }

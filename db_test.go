@@ -2,6 +2,7 @@ package jet
 
 import (
 	_ "github.com/bmizerany/pq"
+	"os"
 	"testing"
 )
 
@@ -9,6 +10,11 @@ func TestDb(t *testing.T) {
 	db, err := Open("postgres", "user=jet dbname=jet sslmode=disable")
 	if err != nil {
 		t.Fatalf(err.Error())
+	}
+	l := NewLogger(os.Stdout)
+	db.SetLogger(l)
+	if db.Logger() != l {
+		t.Fatal("wrong logger set")
 	}
 	err = db.Query(`DROP TABLE IF EXISTS "table"`).Run()
 	if err != nil {
@@ -64,4 +70,5 @@ func TestDb(t *testing.T) {
 	if x := sv3[0]; x.A != "hello" || x.B != 7 {
 		t.Fatal(x)
 	}
+	// t.Fail()
 }

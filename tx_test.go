@@ -2,6 +2,7 @@ package jet
 
 import (
 	_ "github.com/bmizerany/pq"
+	"os"
 	"testing"
 	"time"
 )
@@ -10,6 +11,11 @@ func TestTx(t *testing.T) {
 	db, err := Open("postgres", "user=jet dbname=jet sslmode=disable")
 	if err != nil {
 		t.Fatalf(err.Error())
+	}
+	l := NewLogger(os.Stdout)
+	db.SetLogger(l)
+	if db.Logger() != l {
+		t.Fatal("wrong logger set")
 	}
 	err = db.Query(`DROP TABLE IF EXISTS "tx_table"`).Run()
 	if err != nil {
@@ -22,6 +28,9 @@ func TestTx(t *testing.T) {
 	tx, err := db.Begin()
 	if err != nil {
 		t.Fatal(err.Error())
+	}
+	if tx.Logger() != db.Logger() {
+		t.Fatal("wrong logger set")
 	}
 	err1 := tx.Query(`INSERT INTO "tx_table" ( "a", "b" ) VALUES ( $1, $2 )`, "hello", 7).Run()
 	if err1 != nil {
