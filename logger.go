@@ -11,6 +11,7 @@ type Logger struct {
 	Logger     *log.Logger
 	QueryColor string
 	TxnColor   string
+	ArgsColor  string
 	ResetColor string
 	parts      []string
 }
@@ -23,6 +24,7 @@ func NewLogger(file *os.File) *Logger {
 		Logger:     log.New(file, "SQL: ", log.LstdFlags),
 		QueryColor: "\x1b[35m",
 		TxnColor:   "\x1b[36m",
+		ArgsColor:  "\x1b[33m",
 		ResetColor: "\x1b[0m",
 		parts:      []string{},
 	}
@@ -35,6 +37,11 @@ func (l *Logger) Queryf(format string, args ...interface{}) *Logger {
 
 func (l *Logger) Txnf(format string, args ...interface{}) *Logger {
 	l.parts = append(l.parts, fmt.Sprintf("%s%s%s", l.TxnColor, fmt.Sprintf(format, args...), l.ResetColor))
+	return l
+}
+
+func (l *Logger) Argsf(format string, args ...interface{}) *Logger {
+	l.parts = append(l.parts, fmt.Sprintf("%s%s%s", l.ArgsColor, fmt.Sprintf(format, args...), l.ResetColor))
 	return l
 }
 

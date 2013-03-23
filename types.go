@@ -4,14 +4,10 @@ import (
 	"database/sql"
 )
 
-type Migration interface {
-	Up(tx Tx)
-	Down(tx Tx)
-}
-
-type MigrationSuite interface {
-	Add(m Migration)
-	Run(jet Db) error
+type Migration struct {
+	Up   string
+	Down string
+	Id   int64
 }
 
 type Db interface {

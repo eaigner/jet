@@ -2,6 +2,7 @@ package jet
 
 import (
 	"fmt"
+	"strings"
 )
 
 type runner struct {
@@ -35,6 +36,7 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 	cols, err := rows.Columns()
 	if err != nil {
 		return err
@@ -102,6 +104,14 @@ func (r *runner) logQuery() {
 		if r.txnId != "" {
 			l.Txnf("\t%s: ", r.txnId[:6])
 		}
-		l.Queryf(r.query).Println()
+		l.Queryf(r.query)
+		args := []string{}
+		for _, a := range r.args {
+			args = append(args, fmt.Sprintf(`"%v"`, a))
+		}
+		if len(r.args) > 0 {
+			l.Argsf(" [%s]", strings.Join(args, ", "))
+		}
+		l.Println()
 	}
 }
