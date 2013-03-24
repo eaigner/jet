@@ -102,7 +102,7 @@ func (r *runner) SetLogger(l *Logger) {
 func (r *runner) logQuery() {
 	if l := r.Logger(); l != nil {
 		if r.txnId != "" {
-			l.Txnf("\t%s: ", r.txnId[:6])
+			l.Txnf("\t%s: ", r.txnId[:7])
 		}
 		l.Queryf(r.query)
 		args := []string{}
