@@ -72,12 +72,25 @@ func TestSuite(t *testing.T) {
 	if err := db.Query(`DROP TABLE IF EXISTS "migrations"`).Run(); err != nil {
 		t.Fatal(err.Error())
 	}
-
 	if err, c := s.Run(db, true, 0); err != nil || c != 4 {
 		t.Fatal(err, c)
 	}
-
 	if err, c := s.Run(db, false, 0); err != nil || c != 0 {
+		t.Fatal(err, c)
+	}
+	if err, c := s.Migrate(db); err != nil || c != 4 {
+		t.Fatal(err, c)
+	}
+	if err, c := s.Reset(db); err != nil || c != 0 {
+		t.Fatal(err, c)
+	}
+	if err, c := s.Step(db); err != nil || c != 1 {
+		t.Fatal(err, c)
+	}
+	if err, c := s.Step(db); err != nil || c != 2 {
+		t.Fatal(err, c)
+	}
+	if err, c := s.Rollback(db); err != nil || c != 1 {
 		t.Fatal(err, c)
 	}
 }

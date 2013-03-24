@@ -77,12 +77,17 @@ func (s *Suite) Run(db Db, up bool, maxSteps int) (error, int64) {
 	var row struct {
 		Version int64
 	}
+	row.Version = -1
 	err = db.Query(s.SelectVersionSQL).Rows(&row, 1)
 	if err != nil {
 		return err, -1
 	}
+	step := 0
 	current := row.Version
 	for _, m := range s.buildList(up, row.Version) {
+		if step++; maxSteps > 0 && step > maxSteps {
+			break
+		}
 		txn, err := db.Begin()
 		if err != nil {
 			return err, -1
@@ -94,7 +99,7 @@ func (s *Suite) Run(db Db, up bool, maxSteps int) (error, int64) {
 			next--
 			txn.Query(m.Down).Run()
 		}
-		if current == 0 {
+		if current == -1 {
 			txn.Query(s.InsertVersionSQL, next).Run()
 		} else {
 			txn.Query(s.UpdateVersionSQL, next, current).Run()
