@@ -29,7 +29,7 @@ func main() {
 		`DROP INDEX "fruits_name_index"`,
 	)
 
-	// Run all migrations. The current migration version is stored, old migrations are not run twice!
+	// Run all migrations. The current migration version is stored, already applied migrations are not run twice!
 	err, _ = s.Migrate(db)
 	if err != nil {
 		panic(err)
