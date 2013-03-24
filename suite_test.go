@@ -73,11 +73,11 @@ func TestSuite(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	if err := s.Run(db, true, 0); err != nil {
-		t.Fatal(err)
+	if err, c := s.Run(db, true, 0); err != nil || c != 4 {
+		t.Fatal(err, c)
 	}
 
-	if err := s.Run(db, false, 0); err != nil {
-		t.Fatal(err)
+	if err, c := s.Run(db, false, 0); err != nil || c != 0 {
+		t.Fatal(err, c)
 	}
 }

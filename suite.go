@@ -50,42 +50,42 @@ func (s *Suite) AddSQL(up, down string) {
 	})
 }
 
-func (s *Suite) Step(db Db) error {
+func (s *Suite) Step(db Db) (error, int64) {
 	return s.Run(db, true, 1)
 }
 
-func (s *Suite) Rollback(db Db) error {
+func (s *Suite) Rollback(db Db) (error, int64) {
 	return s.Run(db, false, 1)
 }
 
-func (s *Suite) Migrate(db Db) error {
+func (s *Suite) Migrate(db Db) (error, int64) {
 	return s.Run(db, true, math.MaxInt32)
 }
 
-func (s *Suite) Reset(db Db) error {
+func (s *Suite) Reset(db Db) (error, int64) {
 	return s.Run(db, false, math.MaxInt32)
 }
 
-func (s *Suite) Run(db Db, up bool, maxSteps int) error {
+func (s *Suite) Run(db Db, up bool, maxSteps int) (error, int64) {
 	if l := len(s.Migrations); l == 0 {
-		return errors.New("cannot run suite, no migrations set")
+		return errors.New("cannot run suite, no migrations set"), -1
 	}
 	err := db.Query(s.CreateTableSQL).Run()
 	if err != nil {
-		return err
+		return err, -1
 	}
 	var row struct {
 		Version int64
 	}
 	err = db.Query(s.SelectVersionSQL).Rows(&row, 1)
 	if err != nil {
-		return err
+		return err, -1
 	}
 	current := row.Version
 	for _, m := range s.buildList(up, row.Version) {
 		txn, err := db.Begin()
 		if err != nil {
-			return err
+			return err, -1
 		}
 		next := m.Id
 		if up {
@@ -100,11 +100,11 @@ func (s *Suite) Run(db Db, up bool, maxSteps int) error {
 			txn.Query(s.UpdateVersionSQL, next, current).Run()
 		}
 		if err := txn.Commit(); err != nil {
-			return err
+			return err, -1
 		}
 		current = next
 	}
-	return nil
+	return nil, current
 }
 
 func (s *Suite) buildList(up bool, version int64) []*Migration {
