@@ -6,7 +6,7 @@ import (
 )
 
 func TestBuildList(t *testing.T) {
-	s := NewSuite()
+	var s Suite
 	s.AddSQL("U1", "D1")
 	s.AddSQL("U2", "D2")
 	s.AddSQL("U3", "D3")
@@ -42,7 +42,7 @@ func TestBuildList(t *testing.T) {
 }
 
 func TestSuite(t *testing.T) {
-	s := NewSuite()
+	var s Suite
 	s.AddSQL(
 		`CREATE TABLE "suite_test" ( id serial, name text )`,
 		`DROP TABLE "suite_test"`,

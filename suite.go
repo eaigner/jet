@@ -16,25 +16,28 @@ var (
 )
 
 type Suite struct {
-	Migrations       []*Migration
+	Migrations []*Migration
+	Stmts      *Stmts
+}
+
+type Stmts struct {
 	CreateTableSQL   string
 	SelectVersionSQL string
 	InsertVersionSQL string
 	UpdateVersionSQL string
 }
 
-func NewSuite() *Suite {
-	return &Suite{
-		CreateTableSQL:   fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s" ( "%s" INTEGER )`, TableName, ColumnName),
-		SelectVersionSQL: fmt.Sprintf(`SELECT "%s" FROM "%s" LIMIT 1`, ColumnName, TableName),
-		InsertVersionSQL: fmt.Sprintf(`INSERT INTO "%s" ( "%s" ) VALUES ( $1 )`, TableName, ColumnName),
-		UpdateVersionSQL: fmt.Sprintf(`UPDATE "%s" SET "%s" = $1 WHERE "%s" = $2`, TableName, ColumnName, ColumnName),
-	}
-}
-
 func (s *Suite) Add(m *Migration) {
 	if m == nil {
 		panic("nil migration")
+	}
+	if s.Stmts == nil {
+		s.Stmts = &Stmts{
+			CreateTableSQL:   fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s" ( "%s" INTEGER )`, TableName, ColumnName),
+			SelectVersionSQL: fmt.Sprintf(`SELECT "%s" FROM "%s" LIMIT 1`, ColumnName, TableName),
+			InsertVersionSQL: fmt.Sprintf(`INSERT INTO "%s" ( "%s" ) VALUES ( $1 )`, TableName, ColumnName),
+			UpdateVersionSQL: fmt.Sprintf(`UPDATE "%s" SET "%s" = $1 WHERE "%s" = $2`, TableName, ColumnName, ColumnName),
+		}
 	}
 	if s.Migrations == nil {
 		s.Migrations = []*Migration{m}
@@ -70,7 +73,7 @@ func (s *Suite) Run(db Db, up bool, maxSteps int) (error, int64) {
 	if l := len(s.Migrations); l == 0 {
 		return errors.New("cannot run suite, no migrations set"), -1
 	}
-	err := db.Query(s.CreateTableSQL).Run()
+	err := db.Query(s.Stmts.CreateTableSQL).Run()
 	if err != nil {
 		return err, -1
 	}
@@ -78,7 +81,7 @@ func (s *Suite) Run(db Db, up bool, maxSteps int) (error, int64) {
 		Version int64
 	}
 	row.Version = -1
-	err = db.Query(s.SelectVersionSQL).Rows(&row, 1)
+	err = db.Query(s.Stmts.SelectVersionSQL).Rows(&row, 1)
 	if err != nil {
 		return err, -1
 	}
@@ -100,9 +103,9 @@ func (s *Suite) Run(db Db, up bool, maxSteps int) (error, int64) {
 			txn.Query(m.Down).Run()
 		}
 		if current == -1 {
-			txn.Query(s.InsertVersionSQL, next).Run()
+			txn.Query(s.Stmts.InsertVersionSQL, next).Run()
 		} else {
-			txn.Query(s.UpdateVersionSQL, next, current).Run()
+			txn.Query(s.Stmts.UpdateVersionSQL, next, current).Run()
 		}
 		if err := txn.Commit(); err != nil {
 			return err, -1
