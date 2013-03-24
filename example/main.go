@@ -35,7 +35,7 @@ func main() {
 		panic(err)
 	}
 
-	// Insert a row using a transaction
+	// Insert rows using a transaction
 	txn, err := db.Begin()
 	if err != nil {
 		panic(err)
