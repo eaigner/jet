@@ -1,5 +1,7 @@
 Jet is a super-flexible lightweight SQL interface
 
+Documentation on [GoDoc](http://godoc.org/github.com/eaigner/jet)
+
 ## Example
 
 ```go
