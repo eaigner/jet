@@ -107,7 +107,20 @@ func (r *runner) logQuery() {
 		l.Queryf(r.query)
 		args := []string{}
 		for _, a := range r.args {
-			args = append(args, fmt.Sprintf(`"%v"`, a))
+			var buf []byte
+			switch t := a.(type) {
+			case []uint8:
+				buf = t
+				if len(buf) > 5 {
+					buf = buf[:5]
+				}
+			}
+			if buf != nil {
+				args = append(args, fmt.Sprintf(`<buf:%x...>`, buf))
+			} else {
+				args = append(args, fmt.Sprintf(`"%v"`, a))
+			}
+
 		}
 		if len(r.args) > 0 {
 			l.Argsf(" [%s]", strings.Join(args, ", "))
