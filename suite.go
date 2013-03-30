@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sync"
 )
 
 const (
@@ -18,6 +19,7 @@ var (
 type Suite struct {
 	Migrations []*Migration
 	Stmts      *Stmts
+	mtx        sync.Mutex
 }
 
 type Stmts struct {
@@ -70,6 +72,8 @@ func (s *Suite) Reset(db Db) (error, int64) {
 }
 
 func (s *Suite) Run(db Db, up bool, maxSteps int) (error, int64) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
 	if l := len(s.Migrations); l == 0 {
 		return errors.New("cannot run suite, no migrations set"), -1
 	}
