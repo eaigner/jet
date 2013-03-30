@@ -75,11 +75,12 @@ func TestDb(t *testing.T) {
 	}
 
 	// Test Value()
-	v, err := db.Query(`INSERT INTO "table" ( "a", "b" ) VALUES ( $1, $2 ) RETURNING "b"`, "hellov", 101).Value()
+	var b int64
+	err = db.Query(`INSERT INTO "table" ( "a", "b" ) VALUES ( $1, $2 ) RETURNING "b"`, "hellov", 101).Value(&b)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
-	if x, ok := v.(int64); !ok || x != 101 {
-		t.Fatalf("invalid value: ta: %t, %v (%T)", ok, v, v)
+	if b != 101 {
+		t.Fatal(b)
 	}
 }
