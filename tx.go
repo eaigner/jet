@@ -13,9 +13,16 @@ type tx struct {
 
 func (t *tx) Commit() error {
 	if l := t.Logger(); l != nil {
-		l.Txnf("COMMIT\t%s", t.id).Println()
+		l.Txnf("COMMIT   %s", t.id).Println()
 	}
 	return t.appendError(t.tx.Commit())
+}
+
+func (t *tx) Rollback() error {
+	if l := t.Logger(); l != nil {
+		l.Txnf("ROLLBACK %s", t.id).Println()
+	}
+	return t.appendError(t.tx.Rollback())
 }
 
 func (t *tx) Query(query string, args ...interface{}) Queryable {

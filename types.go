@@ -20,6 +20,8 @@ type Tx interface {
 	Queryable
 	// Commit commits the transaction
 	Commit() error
+	// Rollback rolls back the transaction
+	Rollback() error
 	// Errors returns all errors that occurred during the transaction
 	Errors() []error
 }

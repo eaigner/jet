@@ -27,7 +27,7 @@ func TestTx(t *testing.T) {
 	}
 	tx, err := db.Begin()
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 	if tx.Logger() != db.Logger() {
 		t.Fatal("wrong logger set")
@@ -50,5 +50,27 @@ func TestTx(t *testing.T) {
 	}
 	if x := len(tx.Errors()); x != 2 {
 		t.Fatalf("should report %d errors, has %d", 2, x)
+	}
+
+	// Rollback
+	tx, err = db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = tx.Query(`INSERT INTO "tx_table" ( "a", "b" ) VALUES ( $1, $2 )`, "roll-me-back", 14).Run()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = tx.Rollback()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var c int64
+	err = db.Query(`SELECT COUNT(*) FROM "tx_table"`).Value(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c != 0 {
+		t.Fatal(c)
 	}
 }

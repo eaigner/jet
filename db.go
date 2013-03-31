@@ -28,7 +28,7 @@ func (d *db) Begin() (Tx, error) {
 	}
 	if l := d.Logger(); l != nil {
 		t.SetLogger(l)
-		l.Txnf("BEGIN\t%s", t.id).Println()
+		l.Txnf("BEGIN    %s", t.id).Println()
 	}
 	return t, nil
 }
