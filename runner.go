@@ -91,7 +91,7 @@ func (r *runner) Value(v interface{}) error {
 		first = v
 		break
 	}
-	reflect.ValueOf(v).Elem().Set(reflect.ValueOf(first))
+	setValue(first, reflect.ValueOf(v).Elem())
 	return nil
 }
 
