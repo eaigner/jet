@@ -25,8 +25,7 @@ func main() {
 	}
 
 	// Set a logger
-	logger := jet.NewLogger(os.Stdout)
-	db.SetLogger(logger)
+	db.SetLogger(jet.NewLogger(os.Stdout))
 
 	// Create a migration suite
 	var s jet.Suite
@@ -54,21 +53,19 @@ func main() {
 		panic(err)
 	}
 	txn.Query(
-		`INSERT INTO "fruits" ( "name", "attrs" ) VALUES ( $1, hstore(ARRAY[[$2, $3],[$4, $5]]) )`,
+		`INSERT INTO "fruits" ( "name", "attrs" ) VALUES ( $1, $2 )`,
 		"banana",
-		"color", "yellow",
-		"price", 2,
+		jet.Hstore{"color": "yellow", "price": 2},
 	).Run()
 	txn.Query(
-		`INSERT INTO "fruits" ( "name", "attrs" ) VALUES ( $1, hstore(ARRAY[[$2, $3],[$4, $5]]) )`,
+		`INSERT INTO "fruits" ( "name", "attrs" ) VALUES ( $1, $2 )`,
 		"orange",
-		"color", "orange",
-		"price", 1,
+		jet.Hstore{"color": "orange", "price": 1},
 	).Run()
 	txn.Query(
-		`INSERT INTO "fruits" ( "name", "attrs" ) VALUES ( $1, hstore(ARRAY[[$2, $3],[$4, $5]]) )`,
+		`INSERT INTO "fruits" ( "name", "attrs" ) VALUES ( $1, $2 )`,
 		"grape",
-		"color", "green",
+		jet.Hstore{"color": "green", "price": 3},
 	).Run()
 	if err = txn.Commit(); err != nil {
 		panic(err)
@@ -77,12 +74,9 @@ func main() {
 	// Select some rows
 	var fruits []struct {
 		Name  string
-		Color string
-		Price string
+		Attrs jet.Hstore
 	}
-	if err := db.Query(
-		`SELECT "name", attrs->'color' as "color", attrs->'price' as "price" FROM "fruits"`,
-	).Rows(&fruits); err != nil {
+	if err := db.Query(`SELECT * FROM "fruits"`).Rows(&fruits); err != nil {
 		panic(err)
 	}
 

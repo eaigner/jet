@@ -30,10 +30,12 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 	if len(maxRows) > 0 {
 		max = maxRows[0]
 	}
+	// Convert hstore query
+	query, args := substituteHstoreMarks(r.query, r.args...)
 	// Log
 	r.logQuery()
 	// Query
-	rows, err := r.qo.Query(r.query, r.args...)
+	rows, err := r.qo.Query(query, args...)
 	if err != nil {
 		return err
 	}

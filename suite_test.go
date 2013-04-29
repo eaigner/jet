@@ -60,7 +60,7 @@ func TestSuite(t *testing.T) {
 		`DROP INDEX "name_index"`,
 	)
 
-	db, err := Open("postgres", "user=jet dbname=jet sslmode=disable")
+	db, err := Open("postgres", "user=postgres dbname=jet sslmode=disable")
 	if err != nil {
 		t.Fatalf(err.Error())
 	}

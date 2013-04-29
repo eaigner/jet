@@ -63,9 +63,12 @@ func (m mapper) unpackMap(pv reflect.Value) error {
 func setValue(i interface{}, v reflect.Value) {
 	switch t := i.(type) {
 	case []uint8:
-		if v.Kind() == reflect.String {
+		switch v.Interface().(type) {
+		case string:
 			v.SetString(string(t))
-		} else {
+		case Hstore:
+			v.Set(reflect.ValueOf(parseHstoreColumn(string(t))))
+		default:
 			v.Set(reflect.ValueOf(i))
 		}
 	default:
