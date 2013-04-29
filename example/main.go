@@ -3,13 +3,23 @@ package main
 import (
 	jet ".."
 	"fmt"
-	_ "github.com/bmizerany/pq"
+	_ "github.com/lib/pq"
 	"os"
 )
 
 func main() {
 	// Open database
-	db, err := jet.Open("postgres", "user=jet dbname=jet sslmode=disable")
+	db, err := jet.Open("postgres", "user=postgres dbname=jet sslmode=disable")
+	if err != nil {
+		panic(err)
+	}
+
+	// Reset
+	err = db.Query(`DROP SCHEMA public CASCADE`).Run()
+	if err != nil {
+		panic(err)
+	}
+	err = db.Query(`CREATE SCHEMA public`).Run()
 	if err != nil {
 		panic(err)
 	}
@@ -21,7 +31,11 @@ func main() {
 	// Create a migration suite
 	var s jet.Suite
 	s.AddSQL(
-		`CREATE TABLE "fruits" ( id serial, name text )`,
+		`CREATE EXTENSION IF NOT EXISTS hstore`,
+		`DROP EXTENSION IF EXISTS hstore`,
+	)
+	s.AddSQL(
+		`CREATE TABLE "fruits" ( id serial, name text, attrs hstore )`,
 		`DROP TABLE "fruits"`,
 	)
 	s.AddSQL(
@@ -39,18 +53,36 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	txn.Query(`INSERT INTO "fruits" ( "name" ) VALUES ( $1 )`, "banana").Run()
-	txn.Query(`INSERT INTO "fruits" ( "name" ) VALUES ( $1 )`, "orange").Run()
-	txn.Query(`INSERT INTO "fruits" ( "name" ) VALUES ( $1 )`, "grape").Run()
+	txn.Query(
+		`INSERT INTO "fruits" ( "name", "attrs" ) VALUES ( $1, hstore(ARRAY[[$2, $3],[$4, $5]]) )`,
+		"banana",
+		"color", "yellow",
+		"price", 2,
+	).Run()
+	txn.Query(
+		`INSERT INTO "fruits" ( "name", "attrs" ) VALUES ( $1, hstore(ARRAY[[$2, $3],[$4, $5]]) )`,
+		"orange",
+		"color", "orange",
+		"price", 1,
+	).Run()
+	txn.Query(
+		`INSERT INTO "fruits" ( "name", "attrs" ) VALUES ( $1, hstore(ARRAY[[$2, $3],[$4, $5]]) )`,
+		"grape",
+		"color", "green",
+	).Run()
 	if err = txn.Commit(); err != nil {
 		panic(err)
 	}
 
 	// Select some rows
 	var fruits []struct {
-		Name string
+		Name  string
+		Color string
+		Price string
 	}
-	if err := db.Query(`SELECT * FROM "fruits"`).Rows(&fruits); err != nil {
+	if err := db.Query(
+		`SELECT "name", attrs->'color' as "color", attrs->'price' as "price" FROM "fruits"`,
+	).Rows(&fruits); err != nil {
 		panic(err)
 	}
 
