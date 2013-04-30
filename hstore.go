@@ -67,7 +67,7 @@ func parseHstoreColumn(s string) map[string]interface{} {
 				if quoteOpen {
 					lasti = i
 				} else {
-					a = append(a, s[lasti+1:i])
+					a = append(a, s[lasti:i+1])
 				}
 			}
 			escaped = false
@@ -84,7 +84,7 @@ func parseHstoreColumn(s string) map[string]interface{} {
 	m := make(map[string]interface{}, len(a)/2)
 	lastKey := ""
 	for i, v := range a {
-		uq, _ := strconv.Unquote(`"` + v + `"`)
+		uq, _ := strconv.Unquote(v)
 		if i%2 == 0 {
 			lastKey = uq
 		} else {
