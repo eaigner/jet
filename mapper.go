@@ -66,7 +66,7 @@ func setValue(i interface{}, v reflect.Value) {
 		switch v.Interface().(type) {
 		case string:
 			v.SetString(string(t))
-		case Hstore:
+		case map[string]interface{}:
 			v.Set(reflect.ValueOf(parseHstoreColumn(string(t))))
 		default:
 			v.Set(reflect.ValueOf(i))

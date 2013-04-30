@@ -6,7 +6,7 @@ import (
 
 func TestHstoreQueryMarkSubstitution(t *testing.T) {
 	query := `INSERT INTO "fruits" ( "name", "attrs", "origin" ) VALUES ( $1, $2, $3 )`
-	args := []interface{}{"banana", Hstore{
+	args := []interface{}{"banana", map[string]interface{}{
 		"color": "yellow",
 		"price": 2,
 	}, "cuba"}
@@ -37,6 +37,10 @@ func TestHstoreQuery(t *testing.T) {
 		t.Fatal(err)
 	}
 	db.SetLogger(NewLogger(nil))
+	err = db.Query(`CREATE EXTENSION IF NOT EXISTS hstore`).Run()
+	if err != nil {
+		t.Fatal(err)
+	}
 	err = db.Query(`DROP TABLE IF EXISTS "hstoretable"`).Run()
 	if err != nil {
 		t.Fatal(err)
@@ -48,7 +52,7 @@ func TestHstoreQuery(t *testing.T) {
 	err = db.Query(
 		`INSERT INTO "hstoretable" VALUES ( $1, $2, $3 )`,
 		"aval",
-		Hstore{"key1": "val1", "key2": 2},
+		map[string]interface{}{"key1": "val1", "key2": 2},
 		"cval",
 	).Run()
 	if err != nil {
@@ -56,7 +60,7 @@ func TestHstoreQuery(t *testing.T) {
 	}
 	var results []struct {
 		A string
-		B Hstore
+		B map[string]interface{}
 		C string
 	}
 	err = db.Query(`SELECT * FROM "hstoretable"`).Rows(&results)

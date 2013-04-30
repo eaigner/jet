@@ -8,11 +8,8 @@ import (
 )
 
 var (
-	markRx     = regexp.MustCompile(`\$\d+`)
-	hstorColRx = regexp.MustCompile(`(".*?[^\\]")=>(".*?[^\\]")`)
+	markRx = regexp.MustCompile(`\$\d+`)
 )
-
-type Hstore map[string]interface{}
 
 // hstore(ARRAY[$2, $3, $4, $5])
 
@@ -27,7 +24,7 @@ func substituteHstoreMarks(query string, args ...interface{}) (string, []interfa
 		}
 		arg := args[i]
 		switch t := arg.(type) {
-		case Hstore:
+		case map[string]interface{}:
 			newParts = append(newParts, "hstore(ARRAY[")
 			a := []string{}
 			for k, v := range t {
@@ -55,22 +52,47 @@ func sanitizeMarkEnumeration(query string) string {
 	return strings.Join(a, "")
 }
 
-func parseHstoreColumn(s string) Hstore {
-	m := hstorColRx.FindAllStringSubmatch(s, -1)
-	if len(m)%2 == 1 {
-		panic("invalid hstore map")
-	}
-	h := make(Hstore)
-	if len(m) > 0 {
-		for _, v := range m {
-			k, _ := strconv.Unquote(v[1])
-			v, _ := strconv.Unquote(v[2])
-			if len(k) > 0 {
-				h[k] = v
+func parseHstoreColumn(s string) map[string]interface{} {
+	lasti := 0
+	quoteOpen := false
+	escaped := false
+	a := make([]string, 0, len(s))
+	for i, r := range s {
+		switch r {
+		case '\\':
+			escaped = true
+		case '"':
+			if !escaped {
+				quoteOpen = !quoteOpen
+				if quoteOpen {
+					lasti = i
+				} else {
+					a = append(a, s[lasti+1:i])
+				}
 			}
+			escaped = false
+		default:
+			escaped = false
 		}
 	}
-	return h
+
+	if len(a)%2 == 1 {
+		panic(fmt.Sprintf("invalid hstore map: %v", a))
+	}
+
+	// Convert to map
+	m := make(map[string]interface{}, len(a)/2)
+	lastKey := ""
+	for i, v := range a {
+		uq, _ := strconv.Unquote(`"` + v + `"`)
+		if i%2 == 0 {
+			lastKey = uq
+		} else {
+			m[lastKey] = uq
+		}
+	}
+
+	return m
 }
 
 // TODO: replace when Go 1.1. is released
