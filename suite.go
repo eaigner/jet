@@ -55,31 +55,31 @@ func (s *Suite) AddSQL(up, down string) {
 	})
 }
 
-func (s *Suite) Step(db Db) (error, int64) {
+func (s *Suite) Step(db Db) (error, int64, int) {
 	return s.Run(db, true, 1)
 }
 
-func (s *Suite) Rollback(db Db) (error, int64) {
+func (s *Suite) Rollback(db Db) (error, int64, int) {
 	return s.Run(db, false, 1)
 }
 
-func (s *Suite) Migrate(db Db) (error, int64) {
+func (s *Suite) Migrate(db Db) (error, int64, int) {
 	return s.Run(db, true, math.MaxInt32)
 }
 
-func (s *Suite) Reset(db Db) (error, int64) {
+func (s *Suite) Reset(db Db) (error, int64, int) {
 	return s.Run(db, false, math.MaxInt32)
 }
 
-func (s *Suite) Run(db Db, up bool, maxSteps int) (error, int64) {
+func (s *Suite) Run(db Db, up bool, maxSteps int) (error, int64, int) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	if l := len(s.Migrations); l == 0 {
-		return errors.New("cannot run suite, no migrations set"), -1
+		return errors.New("cannot run suite, no migrations set"), -1, 0
 	}
 	err := db.Query(s.Stmts.CreateTableSQL).Run()
 	if err != nil {
-		return err, -1
+		return err, -1, 0
 	}
 	var row struct {
 		Version int64
@@ -87,9 +87,10 @@ func (s *Suite) Run(db Db, up bool, maxSteps int) (error, int64) {
 	row.Version = -1
 	err = db.Query(s.Stmts.SelectVersionSQL).Rows(&row, 1)
 	if err != nil {
-		return err, -1
+		return err, -1, 0
 	}
 	step := 0
+	stepsApplied := 0
 	current := row.Version
 	for _, m := range s.buildList(up, row.Version) {
 		if step++; maxSteps > 0 && step > maxSteps {
@@ -97,7 +98,7 @@ func (s *Suite) Run(db Db, up bool, maxSteps int) (error, int64) {
 		}
 		txn, err := db.Begin()
 		if err != nil {
-			return err, -1
+			return err, -1, 0
 		}
 		next := m.Id
 		if up {
@@ -112,11 +113,12 @@ func (s *Suite) Run(db Db, up bool, maxSteps int) (error, int64) {
 			txn.Query(s.Stmts.UpdateVersionSQL, next, current).Run()
 		}
 		if err := txn.Commit(); err != nil {
-			return err, -1
+			return err, -1, 0
 		}
 		current = next
+		stepsApplied++
 	}
-	return nil, current
+	return nil, current, stepsApplied
 }
 
 func (s *Suite) buildList(up bool, version int64) []*Migration {
