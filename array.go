@@ -13,8 +13,6 @@ var (
 	mark   = "$0"
 )
 
-// hstore(ARRAY[$2, $3, $4, $5])
-
 func substituteMapAndArrayMarks(query string, args ...interface{}) (string, []interface{}) {
 	newArgs := make([]interface{}, 0, len(args)*2)
 	newParts := []string{}
@@ -40,14 +38,13 @@ func substituteMapAndArrayMarks(query string, args ...interface{}) (string, []in
 }
 
 func serializeSlice(v reflect.Value, newArgs *[]interface{}, newParts *[]string) {
-	*newParts = append(*newParts, "ARRAY[ ")
 	a := make([]string, 0, v.Len())
 	for i := 0; i < v.Len(); i++ {
 		val := v.Index(i)
 		a = append(a, mark)
 		*newArgs = append(*newArgs, val.Interface())
 	}
-	*newParts = append(*newParts, strings.Join(a, ", "), " ]")
+	*newParts = append(*newParts, strings.Join(a, ", "))
 }
 
 func serializeMap(v reflect.Value, newArgs *[]interface{}, newParts *[]string) {
@@ -56,9 +53,9 @@ func serializeMap(v reflect.Value, newArgs *[]interface{}, newParts *[]string) {
 		val := v.MapIndex(keyVal)
 		a = append(a, keyVal.Interface(), val.Interface())
 	}
-	*newParts = append(*newParts, "hstore(")
+	*newParts = append(*newParts, "hstore(ARRAY[ ")
 	serializeSlice(reflect.ValueOf(a), newArgs, newParts)
-	*newParts = append(*newParts, ")")
+	*newParts = append(*newParts, " ])")
 }
 
 func sanitizeMarkEnumeration(query string) string {

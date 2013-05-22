@@ -21,12 +21,13 @@ func TestQueryMarkSubstitution(t *testing.T) {
 	}
 
 	// Slice
+	query2 := `INSERT INTO "fruits" ( "name", "attrs", "origin" ) VALUES ( $1, ARRAY[ $2 ], $3 )`
 	args2 := []interface{}{"banana", []interface{}{"a", "b", "c"}, "cuba"}
 
 	t.Log(query)
 	t.Log(args2)
 
-	newquery, newargs = substituteMapAndArrayMarks(query, args2...)
+	newquery, newargs = substituteMapAndArrayMarks(query2, args2...)
 	if newquery != `INSERT INTO "fruits" ( "name", "attrs", "origin" ) VALUES ( $1, ARRAY[ $2, $3, $4 ], $5 )` {
 		t.Fatal(newquery)
 	}
