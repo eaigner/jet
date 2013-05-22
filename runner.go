@@ -31,9 +31,9 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 		max = maxRows[0]
 	}
 	// Convert hstore query
-	query, args := substituteHstoreMarks(r.query, r.args...)
+	query, args := substituteMapAndArrayMarks(r.query, r.args...)
 	// Log
-	r.logQuery()
+	r.logQuery(query, args)
 	// Query
 	rows, err := r.qo.Query(query, args...)
 	if err != nil {
@@ -105,14 +105,14 @@ func (r *runner) SetLogger(l *Logger) {
 	r.logger = l
 }
 
-func (r *runner) logQuery() {
+func (r *runner) logQuery(rquery string, rargs []interface{}) {
 	if l := r.Logger(); l != nil {
 		if r.txnId != "" {
 			l.Txnf("         %s: ", r.txnId[:7])
 		}
-		l.Queryf(r.query)
+		l.Queryf(rquery)
 		args := []string{}
-		for _, a := range r.args {
+		for _, a := range rargs {
 			var buf []byte
 			switch t := a.(type) {
 			case []uint8:
@@ -128,7 +128,7 @@ func (r *runner) logQuery() {
 			}
 
 		}
-		if len(r.args) > 0 {
+		if len(rargs) > 0 {
 			l.Argsf(" [%s]", strings.Join(args, ", "))
 		}
 		l.Println()

@@ -2,6 +2,7 @@ package jet
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -9,35 +10,55 @@ import (
 
 var (
 	markRx = regexp.MustCompile(`\$\d+`)
+	mark   = "$0"
 )
 
 // hstore(ARRAY[$2, $3, $4, $5])
 
-func substituteHstoreMarks(query string, args ...interface{}) (string, []interface{}) {
+func substituteMapAndArrayMarks(query string, args ...interface{}) (string, []interface{}) {
 	newArgs := make([]interface{}, 0, len(args)*2)
 	newParts := []string{}
-	mark := "$0"
+
 	for i, part := range regexpSplit(markRx, query, -1) {
 		newParts = append(newParts, part)
 		if i > len(args)-1 {
 			break
 		}
 		arg := args[i]
-		switch t := arg.(type) {
-		case map[string]interface{}:
-			newParts = append(newParts, "hstore(ARRAY[")
-			a := []string{}
-			for k, v := range t {
-				newArgs = append(newArgs, k, v)
-				a = append(a, mark, mark)
-			}
-			newParts = append(newParts, strings.Join(a, ", "), "])")
+		val := reflect.ValueOf(arg)
+		switch val.Kind() {
+		case reflect.Map:
+			serializeMap(val, &newArgs, &newParts)
+		case reflect.Slice:
+			serializeSlice(val, &newArgs, &newParts)
 		default:
 			newParts = append(newParts, mark)
 			newArgs = append(newArgs, arg)
 		}
 	}
 	return sanitizeMarkEnumeration(strings.Join(newParts, "")), newArgs
+}
+
+func serializeSlice(v reflect.Value, newArgs *[]interface{}, newParts *[]string) {
+	*newParts = append(*newParts, "ARRAY[ ")
+	a := make([]string, 0, v.Len())
+	for i := 0; i < v.Len(); i++ {
+		val := v.Index(i)
+		a = append(a, mark)
+		*newArgs = append(*newArgs, val.Interface())
+	}
+	*newParts = append(*newParts, strings.Join(a, ", "), " ]")
+}
+
+func serializeMap(v reflect.Value, newArgs *[]interface{}, newParts *[]string) {
+	a := make([]interface{}, 0, v.Len()*2)
+	for _, keyVal := range v.MapKeys() {
+		val := v.MapIndex(keyVal)
+		a = append(a, keyVal.Interface(), val.Interface())
+	}
+	*newParts = append(*newParts, "hstore(")
+	serializeSlice(reflect.ValueOf(a), newArgs, newParts)
+	*newParts = append(*newParts, ")")
 }
 
 func sanitizeMarkEnumeration(query string) string {
