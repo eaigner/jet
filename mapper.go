@@ -11,11 +11,11 @@ type mapper struct {
 }
 
 func (m mapper) unpack(v interface{}) error {
-	vt := reflect.TypeOf(v)
-	if vt.Kind() != reflect.Ptr {
-		return fmt.Errorf("cannot unpack result to non-pointer (%s)", vt.String())
+	pv := reflect.ValueOf(v)
+	if pv.Kind() != reflect.Ptr {
+		return fmt.Errorf("cannot unpack result to non-pointer (%s)", pv.Type().String())
 	}
-	return m.unpackValue(reflect.ValueOf(v))
+	return m.unpackValue(pv)
 }
 
 func (m mapper) unpackValue(pv reflect.Value) error {

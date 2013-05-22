@@ -98,7 +98,7 @@ func TestUnpackStructSlice(t *testing.T) {
 		B string
 	}
 
-	// Unpack struct
+	// Unpack struct slice
 	var v []out
 	err := mapper{m}.unpack(v)
 	if err == nil {
