@@ -24,12 +24,13 @@ func substituteMapAndArrayMarks(query string, args ...interface{}) (string, []in
 		}
 		arg := args[i]
 		val := reflect.ValueOf(arg)
-		switch val.Kind() {
-		case reflect.Map:
+		k := val.Kind()
+
+		if k == reflect.Map {
 			serializeMap(val, &newArgs, &newParts)
-		case reflect.Slice:
+		} else if k == reflect.Slice && val.Type() != reflect.TypeOf([]byte{}) {
 			serializeSlice(val, &newArgs, &newParts)
-		default:
+		} else {
 			newParts = append(newParts, mark)
 			newArgs = append(newArgs, arg)
 		}
