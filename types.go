@@ -14,6 +14,10 @@ type Db interface {
 	Queryable
 	// Begin starts a transaction
 	Begin() (Tx, error)
+
+	// SetColumnConverter sets the converter instance to use
+	// when converting from db column names to struct fields.
+	SetColumnConverter(conv ColumnConverter)
 }
 
 type Tx interface {

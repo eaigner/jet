@@ -13,6 +13,7 @@ func TestDb(t *testing.T) {
 	}
 	l := NewLogger(os.Stdout)
 	db.SetLogger(l)
+	db.SetColumnConverter(SnakeCaseConverter)
 	if db.Logger() != l {
 		t.Fatal("wrong logger set")
 	}

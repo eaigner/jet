@@ -7,6 +7,7 @@ import (
 type tx struct {
 	runner
 	tx     *sql.Tx
+	conv   ColumnConverter
 	id     string
 	errors []error
 }
@@ -28,6 +29,7 @@ func (t *tx) Rollback() error {
 func (t *tx) Query(query string, args ...interface{}) Queryable {
 	t.runner = runner{
 		qo:     t.tx,
+		conv:   t.conv,
 		query:  query,
 		args:   args,
 		logger: t.runner.logger,

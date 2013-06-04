@@ -8,6 +8,7 @@ import (
 
 type mapper struct {
 	columns map[string]interface{}
+	conv    ColumnConverter
 }
 
 func (m mapper) unpack(v interface{}) error {
@@ -41,7 +42,12 @@ func (m mapper) unpackValue(pv reflect.Value) error {
 func (m mapper) unpackStruct(pv reflect.Value) error {
 	iv := reflect.Indirect(pv)
 	for k, v := range m.columns {
-		name := columnToFieldName(k)
+		var name string
+		if m.conv == nil {
+			name = strings.Title(k) // At least the first letter needs to be upper case
+		} else if m.conv != nil {
+			name = m.conv.ColumnToFieldName(k)
+		}
 		field := iv.FieldByName(name)
 		if field.IsValid() {
 			setValue(reflect.Indirect(reflect.ValueOf(v)).Interface(), field)
@@ -74,16 +80,4 @@ func setValue(i interface{}, v reflect.Value) {
 	default:
 		v.Set(reflect.ValueOf(i))
 	}
-}
-
-func columnToFieldName(s string) string {
-	name := ""
-	if l := len(s); l > 0 {
-		chunks := strings.Split(s, "_")
-		for i, v := range chunks {
-			chunks[i] = strings.Title(v)
-		}
-		name = strings.Join(chunks, "")
-	}
-	return name
 }

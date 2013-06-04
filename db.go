@@ -14,7 +14,12 @@ func Open(driverName, dataSourceName string) (Db, error) {
 
 type db struct {
 	runner
-	db *sql.DB
+	db   *sql.DB
+	conv ColumnConverter
+}
+
+func (d *db) SetColumnConverter(conv ColumnConverter) {
+	d.conv = conv
 }
 
 func (d *db) Begin() (Tx, error) {
@@ -23,8 +28,9 @@ func (d *db) Begin() (Tx, error) {
 		return nil, err
 	}
 	t := &tx{
-		tx: tx2,
-		id: newAlphanumericId(40),
+		tx:   tx2,
+		conv: d.conv,
+		id:   newAlphanumericId(40),
 	}
 	if l := d.Logger(); l != nil {
 		t.SetLogger(l)
@@ -36,6 +42,7 @@ func (d *db) Begin() (Tx, error) {
 func (d *db) Query(query string, args ...interface{}) Queryable {
 	d.runner = runner{
 		qo:     d.db,
+		conv:   d.conv,
 		query:  query,
 		args:   args,
 		logger: d.runner.logger,

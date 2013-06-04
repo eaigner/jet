@@ -8,6 +8,7 @@ import (
 
 type runner struct {
 	qo     queryObject
+	conv   ColumnConverter
 	txnId  string
 	query  string
 	args   []interface{}
@@ -70,7 +71,7 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 		for i, col := range cols {
 			m[col] = containers[i]
 		}
-		err = mapper{m}.unpack(v)
+		err = mapper{m, r.conv}.unpack(v)
 		if err != nil {
 			return err
 		}

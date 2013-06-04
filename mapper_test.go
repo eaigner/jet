@@ -5,21 +5,6 @@ import (
 	"testing"
 )
 
-func TestColumnToFieldName(t *testing.T) {
-	if x := columnToFieldName("column_one"); x != "ColumnOne" {
-		t.Fatal(x)
-	}
-	if x := columnToFieldName("a"); x != "A" {
-		t.Fatal(x)
-	}
-	if x := columnToFieldName("ab"); x != "Ab" {
-		t.Fatal(x)
-	}
-	if x := columnToFieldName("Already_Camel"); x != "AlreadyCamel" {
-		t.Fatal(x)
-	}
-}
-
 func TestUnpackStruct(t *testing.T) {
 	m := map[string]interface{}{
 		"ab_c": int64(9),
@@ -38,11 +23,11 @@ func TestUnpackStruct(t *testing.T) {
 
 	// Unpack struct
 	var v out
-	err := mapper{m}.unpack(v)
+	err := mapper{m, SnakeCaseConverter}.unpack(v)
 	if err == nil {
 		t.Fatal("should return error")
 	}
-	err = mapper{m}.unpack(&v)
+	err = mapper{m, SnakeCaseConverter}.unpack(&v)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +60,7 @@ func TestUnpackMap(t *testing.T) {
 		e   string
 	}
 	var m2 map[string]interface{}
-	err := mapper{m}.unpack(&m2)
+	err := mapper{m, SnakeCaseConverter}.unpack(&m2)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -98,15 +83,15 @@ func TestUnpackStructSlice(t *testing.T) {
 		A int64
 		B string
 	}
-	err := mapper{m}.unpack(v)
+	err := mapper{m, SnakeCaseConverter}.unpack(v)
 	if err == nil {
 		t.Fatal("should return error")
 	}
-	err = mapper{m}.unpack(&v)
+	err = mapper{m, SnakeCaseConverter}.unpack(&v)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = mapper{m2}.unpack(&v)
+	err = mapper{m2, SnakeCaseConverter}.unpack(&v)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
