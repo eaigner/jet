@@ -44,7 +44,7 @@ func TestUnpackStruct(t *testing.T) {
 	}
 	err = mapper{m}.unpack(&v)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 	if x := v.AbC; x != 9 {
 		t.Fatal(x)
@@ -93,13 +93,11 @@ func TestUnpackStructSlice(t *testing.T) {
 		"A": int64(2),
 		"B": "hello2",
 	}
-	type out struct {
+	// Unpack struct slice
+	var v []struct {
 		A int64
 		B string
 	}
-
-	// Unpack struct slice
-	var v []out
 	err := mapper{m}.unpack(v)
 	if err == nil {
 		t.Fatal("should return error")
