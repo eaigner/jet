@@ -3,7 +3,7 @@ package main
 import (
 	jet ".."
 	"flag"
-	_ "github.com/lib/pq"
+	_ "github.com/go-sql-driver/mysql"
 	"log"
 	"os"
 	"runtime/pprof"
@@ -26,25 +26,24 @@ func main() {
 }
 
 func run() {
-	log.Println("A")
-	db, err := jet.Open("postgres", "user=postgres dbname=jet sslmode=disable")
+	db, err := jet.Open("mysql", "benchmarkdbuser:benchmarkdbpass@tcp(localhost:3306)/hello_world?charset=utf8")
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = db.Query(`DROP TABLE IF EXISTS "benchmark"`).Run()
+	err = db.Query(`DROP TABLE IF EXISTS benchmark`).Run()
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = db.Query(`CREATE TABLE "benchmark" ( "a" text, "b" integer )`).Run()
+	err = db.Query(`CREATE TABLE benchmark ( a VARCHAR(40), b INT )`).Run()
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = db.Query(`INSERT INTO "benchmark" ( "a", "b" ) VALUES ( $1, $2 )`, "benchme!", 9).Run()
+	err = db.Query(`INSERT INTO benchmark ( a, b ) VALUES ( ?, ? )`, "benchme!", 9).Run()
 	if err != nil {
 		log.Fatal(err)
 	}
 	n := 20
-	loops := 1000000
+	loops := 10000000
 	nloops := loops / n
 
 	var wg sync.WaitGroup
@@ -57,15 +56,11 @@ func run() {
 					A string
 					B int64
 				}
-				err = db.Query(`SELECT * FROM "table"`).Rows(&v)
-				if err != nil {
-					log.Fatal(err)
-				}
+				db.Query(`SELECT * FROM benchmark`).Rows(&v)
 				wg.Done()
 			}
 			wg.Done()
 		}()
 	}
 	wg.Wait()
-	log.Println("B")
 }
