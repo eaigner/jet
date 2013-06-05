@@ -23,6 +23,9 @@ type Db interface {
 	//
 	// If n <= 0, no idle connections are retained.
 	SetMaxIdleConns(n int)
+
+	// ExpandMapAndSliceMarker expands a marker to several if argument is a slice or map.
+	ExpandMapAndSliceMarker(f bool)
 }
 
 type Tx interface {

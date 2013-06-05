@@ -1,14 +1,18 @@
 package jet
 
 import (
+	"database/sql"
 	"fmt"
 	"reflect"
 	"strings"
 )
 
 type runner struct {
+	db     *sql.DB
+	tx     *sql.Tx
 	qo     queryObject
 	conv   ColumnConverter
+	expand bool
 	txnId  string
 	query  string
 	args   []interface{}
@@ -31,8 +35,11 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 	if len(maxRows) > 0 {
 		max = maxRows[0]
 	}
-	// Convert hstore query
-	query, args := substituteMapAndArrayMarks(r.query, r.args...)
+	// Expand map and slice markers
+	query, args := r.query, r.args
+	if r.expand {
+		query, args = substituteMapAndArrayMarks(r.query, r.args...)
+	}
 	// Log
 	r.logQuery(query, args)
 	// Query

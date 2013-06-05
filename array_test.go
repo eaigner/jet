@@ -52,6 +52,7 @@ func TestHstoreQuery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	db.ExpandMapAndSliceMarker(true)
 	db.SetColumnConverter(SnakeCaseConverter)
 	db.SetLogger(NewLogger(nil))
 	err = db.Query(`CREATE EXTENSION IF NOT EXISTS hstore`).Run()
