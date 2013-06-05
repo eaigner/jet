@@ -9,23 +9,27 @@ import (
 )
 
 var (
-	markTestRx  = regexp.MustCompile(`(\$\d+)`)
-	markSplitRx = regexp.MustCompile(`(\$\d+|\?)`)
+	markRx = regexp.MustCompile(`(\$\d+|\?)`)
 )
 
 func substituteMapAndArrayMarks(query string, args ...interface{}) (string, []interface{}) {
-	newArgs := make([]interface{}, 0, len(args)*2)
-	newParts := []string{}
-
+	loc := markRx.FindStringIndex(query)
+	if loc == nil {
+		return query, args
+	}
+	usesNumberedMarkers := false
 	markFormat := "?"
 	markPlaceholder := "?"
-	var usesNumberedMarkers = markTestRx.MatchString(query)
-	if usesNumberedMarkers {
+
+	if query[loc[0]:loc[0]+1] == "$" {
+		usesNumberedMarkers = true
 		markFormat = "$%d"
 		markPlaceholder = "$0"
 	}
 
-	queryParts := markSplitRx.Split(query, -1)
+	newArgs := make([]interface{}, 0, len(args)*2)
+	newParts := []string{}
+	queryParts := markRx.Split(query, -1)
 	for i, part := range queryParts {
 		newParts = append(newParts, part)
 		if i > len(args)-1 {
@@ -69,7 +73,7 @@ func serializeMap(markPlaceholder string, v reflect.Value, newArgs *[]interface{
 }
 
 func sanitizeMarkEnumeration(usesNumberedMarkers bool, markFormat, query string) string {
-	parts := markSplitRx.Split(query, -1)
+	parts := markRx.Split(query, -1)
 	a := make([]string, 0, len(parts)*2)
 	for i, v := range parts {
 		a = append(a, v)
