@@ -117,7 +117,7 @@ func BenchmarkQueryRows(b *testing.B) {
 			A string
 			B int64
 		}
-		err = db.Query(`SELECT * FROM "table"`).Rows(&v)
+		err = db.Query(`SELECT * FROM "benchmark"`).Rows(&v)
 		if err != nil {
 			b.Fatal(err)
 		}
