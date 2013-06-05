@@ -110,7 +110,7 @@ func (r *runner) Value(v interface{}) error {
 		first = v
 		break
 	}
-	setValue(first, reflect.ValueOf(v).Elem())
+	setValue(reflect.ValueOf(first), reflect.ValueOf(v).Elem())
 	return nil
 }
 

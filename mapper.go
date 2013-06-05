@@ -3,6 +3,7 @@ package jet
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -23,18 +24,18 @@ func (m *mapper) unpack(v interface{}) error {
 func (m *mapper) unpackValue(pv reflect.Value) error {
 	switch pv.Kind() {
 	case reflect.Ptr:
-		return m.unpackValue(reflect.Indirect(pv))
+		return m.unpackValue(pv.Elem())
 	case reflect.Struct:
 		return m.unpackStruct(pv)
 	case reflect.Map:
 		return m.unpackMap(pv)
 	case reflect.Slice:
-		sv := reflect.New(pv.Type().Elem())
+		sv := reflect.New(pv.Type().Elem()).Elem()
 		err := m.unpackValue(sv)
 		if err != nil {
 			return err
 		}
-		pv.Set(reflect.Append(pv, sv.Elem()))
+		pv.Set(reflect.Append(pv, sv))
 		return nil
 	}
 	return fmt.Errorf("cannot unpack result to %s (%s)", pv.Type().String(), pv.Kind())
@@ -50,9 +51,8 @@ func (m *mapper) unpackStruct(pv reflect.Value) error {
 		} else if m.conv != nil {
 			name = m.conv.ColumnToFieldName(k)
 		}
-		field := iv.FieldByName(name)
-		if field.IsValid() {
-			setValue(reflect.Indirect(reflect.ValueOf(v)).Interface(), field)
+		if f := iv.FieldByName(name); f.IsValid() {
+			setValue(reflect.Indirect(reflect.ValueOf(v)), f)
 		}
 	}
 	return nil
@@ -69,18 +69,25 @@ func (m *mapper) unpackMap(pv reflect.Value) error {
 	return nil
 }
 
-func setValue(i interface{}, v reflect.Value) {
-	switch t := i.(type) {
+func convertAndSet(f interface{}, to reflect.Value) {
+	to.Set(reflect.ValueOf(f).Convert(to.Type()))
+}
+
+func setValue(from, to reflect.Value) {
+	switch t := from.Interface().(type) {
 	case []uint8:
-		switch v.Interface().(type) {
+		switch to.Interface().(type) {
+		case uint8, uint16, uint32, uint64, int8, int16, int32, int64:
+			n, _ := strconv.ParseInt(string(t), 10, 64)
+			convertAndSet(n, to)
 		case string:
-			v.SetString(string(t))
+			to.SetString(string(t))
 		case map[string]interface{}:
-			v.Set(reflect.ValueOf(parseHstoreColumn(string(t))))
+			to.Set(reflect.ValueOf(parseHstoreColumn(string(t))))
 		default:
-			v.Set(reflect.ValueOf(i))
+			convertAndSet(t, to)
 		}
 	default:
-		v.Set(reflect.ValueOf(i).Convert(v.Type()))
+		convertAndSet(t, to)
 	}
 }

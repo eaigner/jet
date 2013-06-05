@@ -2,95 +2,125 @@ package jet
 
 import (
 	_ "github.com/bmizerany/pq"
+	_ "github.com/go-sql-driver/mysql"
 	"os"
 	"testing"
 )
 
 func TestDb(t *testing.T) {
-	db, err := Open("postgres", "user=postgres dbname=jet sslmode=disable")
-	if err != nil {
-		t.Fatal(err)
+	drivers := map[string]string{
+		"postgres": "user=postgres dbname=jet sslmode=disable",
+		"mysql":    "benchmarkdbuser:benchmarkdbpass@tcp(localhost:3306)/hello_world?charset=utf8", // TODO: change source
 	}
-	l := NewLogger(os.Stdout)
-	db.SetLogger(l)
-	db.SetColumnConverter(SnakeCaseConverter)
-	if db.Logger() != l {
-		t.Fatal("wrong logger set")
-	}
-	err = db.Query(`DROP TABLE IF EXISTS "table"`).Run()
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = db.Query(`CREATE TABLE "table" ( "a" text, "b" integer )`).Run()
-	if err != nil {
-		t.Fatal(err)
-	}
+	for driverName, driverSource := range drivers {
+		t.Log(driverName)
 
-	var mv map[string]interface{}
-	err = db.Query(`INSERT INTO "table" ( "a", "b" ) VALUES ( $1, $2 ) RETURNING "a"`, "hello", 7).Rows(&mv)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if x := len(mv); x != 1 {
-		t.Fatal("wrong map len", x, mv)
-	}
-	x, ok := mv["a"].([]uint8)
-	if !ok || string(x) != "hello" {
-		t.Fatal(x)
-	}
+		db, err := Open(driverName, driverSource)
+		if err != nil {
+			t.Fatal(err)
+		}
+		l := NewLogger(os.Stdout)
+		db.SetLogger(l)
+		db.SetColumnConverter(SnakeCaseConverter)
+		if db.Logger() != l {
+			t.Fatal("wrong logger set")
+		}
+		err = db.Query(`DROP TABLE IF EXISTS jetTest`).Run()
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = db.Query(`CREATE TABLE jetTest ( a VARCHAR(100), b INT )`).Run()
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	var sv struct {
-		A string
-	}
-	err = db.Query(`INSERT INTO "table" ( "a", "b" ) VALUES ( $1, $2 ) RETURNING "a"`, "hello2", 8).Rows(&sv)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if x := sv.A; x != "hello2" {
-		t.Fatal(x)
-	}
+		var mv map[string]interface{}
+		switch driverName {
+		case "postgres":
+			err = db.Query(`INSERT INTO jetTest ( a, b ) VALUES ( $1, $2 ) RETURNING a`, "hello", 7).Rows(&mv)
+		case "mysql":
+			err = db.Query(`INSERT INTO jetTest ( a, b ) VALUES ( ?, ? )`, "hello", 7).Run()
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if driverName == "postgres" {
+			if x := len(mv); x != 1 {
+				t.Fatal("wrong map len", x, mv)
+			}
+			x, ok := mv["a"].([]uint8)
+			if !ok || string(x) != "hello" {
+				t.Fatal(x)
+			}
+		}
 
-	var sv2 []struct {
-		A string
-		B int16
-	}
-	err = db.Query(`SELECT * FROM "table"`).Rows(&sv2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if x := len(sv2); x != 2 {
-		t.Fatal(x, sv2)
-	}
-	if x := sv2[0]; x.A != "hello" || x.B != 7 {
-		t.Fatal(x)
-	}
-	if x := sv2[1]; x.A != "hello2" || x.B != 8 {
-		t.Fatal(x)
-	}
+		var sv struct {
+			A string
+		}
+		switch driverName {
+		case "postgres":
+			err = db.Query(`INSERT INTO jetTest ( a, b ) VALUES ( $1, $2 ) RETURNING a`, "hello2", 8).Rows(&sv)
+		case "mysql":
+			err = db.Query(`INSERT INTO jetTest ( a, b ) VALUES ( ?, ? )`, "hello2", 8).Run()
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if driverName == "postgres" {
+			if x := sv.A; x != "hello2" {
+				t.Fatal(x)
+			}
+		}
 
-	var sv3 []struct {
-		A string
-		B int64
-	}
-	err = db.Query(`SELECT * FROM "table"`).Rows(&sv3, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if x := len(sv3); x != 1 {
-		t.Fatal(x)
-	}
-	if x := sv3[0]; x.A != "hello" || x.B != 7 {
-		t.Fatal(x)
-	}
+		var sv2 []struct {
+			A string
+			B int16
+		}
+		err = db.Query(`SELECT * FROM jetTest`).Rows(&sv2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if x := len(sv2); x != 2 {
+			t.Fatal(x, sv2)
+		}
+		if x := sv2[0]; x.A != "hello" || x.B != 7 {
+			t.Fatal(x)
+		}
+		if x := sv2[1]; x.A != "hello2" || x.B != 8 {
+			t.Fatal(x)
+		}
 
-	// Single value
-	var b int64
-	err = db.Query(`INSERT INTO "table" ( "a", "b" ) VALUES ( $1, $2 ) RETURNING "b"`, "hellov", 101).Value(&b)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if b != 101 {
-		t.Fatal(b)
+		var sv3 []struct {
+			A string
+			B int64
+		}
+		err = db.Query(`SELECT * FROM jetTest`).Rows(&sv3, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if x := len(sv3); x != 1 {
+			t.Fatal(x)
+		}
+		if x := sv3[0]; x.A != "hello" || x.B != 7 {
+			t.Fatal(x)
+		}
+
+		// Single value
+		var b int64
+		switch driverName {
+		case "postgres":
+			err = db.Query(`INSERT INTO jetTest ( a, b ) VALUES ( $1, $2 ) RETURNING b`, "hellov", 101).Value(&b)
+		case "mysql":
+			err = db.Query(`INSERT INTO jetTest ( a, b ) VALUES ( ?, ? )`, "hellov", 101).Run()
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if driverName == "postgres" {
+			if b != 101 {
+				t.Fatal(b)
+			}
+		}
 	}
 }
 
