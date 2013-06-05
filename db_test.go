@@ -9,7 +9,7 @@ import (
 func TestDb(t *testing.T) {
 	db, err := Open("postgres", "user=postgres dbname=jet sslmode=disable")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err)
 	}
 	l := NewLogger(os.Stdout)
 	db.SetLogger(l)
@@ -19,17 +19,17 @@ func TestDb(t *testing.T) {
 	}
 	err = db.Query(`DROP TABLE IF EXISTS "table"`).Run()
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 	err = db.Query(`CREATE TABLE "table" ( "a" text, "b" integer )`).Run()
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 
 	var mv map[string]interface{}
 	err = db.Query(`INSERT INTO "table" ( "a", "b" ) VALUES ( $1, $2 ) RETURNING "a"`, "hello", 7).Rows(&mv)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 	if x := len(mv); x != 1 {
 		t.Fatal("wrong map len", x, mv)
@@ -44,7 +44,7 @@ func TestDb(t *testing.T) {
 	}
 	err = db.Query(`INSERT INTO "table" ( "a", "b" ) VALUES ( $1, $2 ) RETURNING "a"`, "hello2", 8).Rows(&sv)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 	if x := sv.A; x != "hello2" {
 		t.Fatal(x)
@@ -56,7 +56,7 @@ func TestDb(t *testing.T) {
 	}
 	err = db.Query(`SELECT * FROM "table"`).Rows(&sv2)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 	if x := len(sv2); x != 2 {
 		t.Fatal(x, sv2)
@@ -74,7 +74,7 @@ func TestDb(t *testing.T) {
 	}
 	err = db.Query(`SELECT * FROM "table"`).Rows(&sv3, 1)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 	if x := len(sv3); x != 1 {
 		t.Fatal(x)
@@ -91,5 +91,34 @@ func TestDb(t *testing.T) {
 	}
 	if b != 101 {
 		t.Fatal(b)
+	}
+}
+
+func BenchmarkQueryRows(b *testing.B) {
+	db, err := Open("postgres", "user=postgres dbname=jet sslmode=disable")
+	if err != nil {
+		b.Fatal(err)
+	}
+	err = db.Query(`DROP TABLE IF EXISTS "benchmark"`).Run()
+	if err != nil {
+		b.Fatal(err)
+	}
+	err = db.Query(`CREATE TABLE "benchmark" ( "a" text, "b" integer )`).Run()
+	if err != nil {
+		b.Fatal(err)
+	}
+	err = db.Query(`INSERT INTO "benchmark" ( "a", "b" ) VALUES ( $1, $2 )`, "benchme!", 9).Run()
+	if err != nil {
+		b.Fatal(err)
+	}
+	for i := 0; i < b.N; i++ {
+		var v []struct {
+			A string
+			B int64
+		}
+		err = db.Query(`SELECT * FROM "table"`).Rows(&v)
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 }
