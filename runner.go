@@ -78,8 +78,7 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 		// Scan values into containers
 		cont := make([]interface{}, 0, len(cols))
 		for i := 0; i < cap(cont); i++ {
-			var cv interface{}
-			cont = append(cont, &cv)
+			cont = append(cont, new(interface{}))
 		}
 		err := rows.Scan(cont...)
 		if err != nil {
