@@ -111,6 +111,7 @@ func BenchmarkQueryRows(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var v []struct {
 			A string
