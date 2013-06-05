@@ -18,6 +18,11 @@ type Db interface {
 	// SetColumnConverter sets the converter instance to use
 	// when converting from db column names to struct fields.
 	SetColumnConverter(conv ColumnConverter)
+
+	// SetMaxIdleConns sets the maximum number of connections in the idle connection pool.
+	//
+	// If n <= 0, no idle connections are retained.
+	SetMaxIdleConns(n int)
 }
 
 type Tx interface {

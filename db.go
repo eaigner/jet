@@ -18,6 +18,10 @@ type db struct {
 	conv ColumnConverter
 }
 
+func (d *db) SetMaxIdleConns(n int) {
+	d.db.SetMaxIdleConns(n)
+}
+
 func (d *db) SetColumnConverter(conv ColumnConverter) {
 	d.conv = conv
 }

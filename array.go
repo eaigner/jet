@@ -9,15 +9,24 @@ import (
 )
 
 var (
-	markRx = regexp.MustCompile(`\$\d+`)
-	mark   = "$0"
+	markTestRx  = regexp.MustCompile(`(\$\d+)`)
+	markSplitRx = regexp.MustCompile(`(\$\d+|\?)`)
 )
 
 func substituteMapAndArrayMarks(query string, args ...interface{}) (string, []interface{}) {
 	newArgs := make([]interface{}, 0, len(args)*2)
 	newParts := []string{}
 
-	for i, part := range regexpSplit(markRx, query, -1) {
+	markFormat := "?"
+	markPlaceholder := "?"
+	var usesNumberedMarkers = markTestRx.MatchString(query)
+	if usesNumberedMarkers {
+		markFormat = "$%d"
+		markPlaceholder = "$0"
+	}
+
+	queryParts := markSplitRx.Split(query, -1)
+	for i, part := range queryParts {
 		newParts = append(newParts, part)
 		if i > len(args)-1 {
 			break
@@ -27,45 +36,49 @@ func substituteMapAndArrayMarks(query string, args ...interface{}) (string, []in
 		k := val.Kind()
 
 		if k == reflect.Map {
-			serializeMap(val, &newArgs, &newParts)
+			serializeMap(markPlaceholder, val, &newArgs, &newParts)
 		} else if k == reflect.Slice && val.Type() != reflect.TypeOf([]byte{}) {
-			serializeSlice(val, &newArgs, &newParts)
+			serializeSlice(markPlaceholder, val, &newArgs, &newParts)
 		} else {
-			newParts = append(newParts, mark)
+			newParts = append(newParts, markPlaceholder)
 			newArgs = append(newArgs, arg)
 		}
 	}
-	return sanitizeMarkEnumeration(strings.Join(newParts, "")), newArgs
+	return sanitizeMarkEnumeration(usesNumberedMarkers, markFormat, strings.Join(newParts, "")), newArgs
 }
 
-func serializeSlice(v reflect.Value, newArgs *[]interface{}, newParts *[]string) {
+func serializeSlice(markPlaceholder string, v reflect.Value, newArgs *[]interface{}, newParts *[]string) {
 	a := make([]string, 0, v.Len())
 	for i := 0; i < v.Len(); i++ {
 		val := v.Index(i)
-		a = append(a, mark)
+		a = append(a, markPlaceholder)
 		*newArgs = append(*newArgs, val.Interface())
 	}
 	*newParts = append(*newParts, strings.Join(a, ", "))
 }
 
-func serializeMap(v reflect.Value, newArgs *[]interface{}, newParts *[]string) {
+func serializeMap(markPlaceholder string, v reflect.Value, newArgs *[]interface{}, newParts *[]string) {
 	a := make([]interface{}, 0, v.Len()*2)
 	for _, keyVal := range v.MapKeys() {
 		val := v.MapIndex(keyVal)
 		a = append(a, keyVal.Interface(), val.Interface())
 	}
 	*newParts = append(*newParts, "hstore(ARRAY[ ")
-	serializeSlice(reflect.ValueOf(a), newArgs, newParts)
+	serializeSlice(markPlaceholder, reflect.ValueOf(a), newArgs, newParts)
 	*newParts = append(*newParts, " ])")
 }
 
-func sanitizeMarkEnumeration(query string) string {
-	parts := regexpSplit(markRx, query, -1)
+func sanitizeMarkEnumeration(usesNumberedMarkers bool, markFormat, query string) string {
+	parts := markSplitRx.Split(query, -1)
 	a := make([]string, 0, len(parts)*2)
 	for i, v := range parts {
 		a = append(a, v)
 		if i < len(parts)-1 {
-			a = append(a, fmt.Sprintf("$%d", i+1))
+			if usesNumberedMarkers {
+				a = append(a, fmt.Sprintf(markFormat, i+1))
+			} else {
+				a = append(a, markFormat)
+			}
 		}
 	}
 	return strings.Join(a, "")
@@ -112,37 +125,4 @@ func parseHstoreColumn(s string) map[string]interface{} {
 	}
 
 	return m
-}
-
-// TODO: replace when Go 1.1. is released
-// This is the split source from http://tip.golang.org/src/pkg/regexp/regexp.go?s=33145:33194#L1067
-func regexpSplit(re *regexp.Regexp, s string, n int) []string {
-	if n == 0 {
-		return nil
-	}
-	if len(s) == 0 {
-		return []string{""}
-	}
-
-	matches := re.FindAllStringIndex(s, n)
-	strings := make([]string, 0, len(matches))
-
-	beg := 0
-	end := 0
-	for _, match := range matches {
-		if n > 0 && len(strings) >= n-1 {
-			break
-		}
-		end = match[0]
-		if match[1] != 0 {
-			strings = append(strings, s[beg:end])
-		}
-		beg = match[1]
-	}
-
-	if end != len(s) {
-		strings = append(strings, s[beg:])
-	}
-
-	return strings
 }
