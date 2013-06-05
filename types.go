@@ -55,4 +55,5 @@ type Queryable interface {
 
 type queryObject interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
+	Exec(query string, args ...interface{}) (sql.Result, error)
 }
