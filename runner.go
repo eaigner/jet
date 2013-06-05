@@ -53,6 +53,10 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 		return err
 	}
 	var i int64 = 0
+	mppr := &mapper{
+		keys: cols,
+		conv: r.conv,
+	}
 	for {
 		// Check if max rows has been reached
 		if max >= 0 && i >= max {
@@ -63,22 +67,19 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 			break
 		}
 		// Scan values into containers
-		containers := make([]interface{}, 0, len(cols))
-		for i := 0; i < cap(containers); i++ {
+		cont := make([]interface{}, 0, len(cols))
+		for i := 0; i < cap(cont); i++ {
 			var cv interface{}
-			containers = append(containers, &cv)
+			cont = append(cont, &cv)
 		}
-		err := rows.Scan(containers...)
+		err := rows.Scan(cont...)
 		if err != nil {
 			return err
 		}
 
 		// Map values
-		m := make(map[string]interface{}, len(cols))
-		for i, col := range cols {
-			m[col] = containers[i]
-		}
-		err = mapper{m, r.conv}.unpack(v)
+		mppr.values = cont
+		err = mppr.unpack(v)
 		if err != nil {
 			return err
 		}

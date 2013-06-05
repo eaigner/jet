@@ -7,11 +7,12 @@ import (
 )
 
 type mapper struct {
-	columns map[string]interface{}
-	conv    ColumnConverter
+	keys   []string
+	values []interface{}
+	conv   ColumnConverter
 }
 
-func (m mapper) unpack(v interface{}) error {
+func (m *mapper) unpack(v interface{}) error {
 	pv := reflect.ValueOf(v)
 	if pv.Kind() != reflect.Ptr {
 		return fmt.Errorf("cannot unpack result to non-pointer (%s)", pv.Type().String())
@@ -19,7 +20,7 @@ func (m mapper) unpack(v interface{}) error {
 	return m.unpackValue(pv)
 }
 
-func (m mapper) unpackValue(pv reflect.Value) error {
+func (m *mapper) unpackValue(pv reflect.Value) error {
 	switch pv.Kind() {
 	case reflect.Ptr:
 		return m.unpackValue(reflect.Indirect(pv))
@@ -39,9 +40,10 @@ func (m mapper) unpackValue(pv reflect.Value) error {
 	return fmt.Errorf("cannot unpack result to %s (%s)", pv.Type().String(), pv.Kind())
 }
 
-func (m mapper) unpackStruct(pv reflect.Value) error {
+func (m *mapper) unpackStruct(pv reflect.Value) error {
 	iv := reflect.Indirect(pv)
-	for k, v := range m.columns {
+	for i, k := range m.keys {
+		v := m.values[i]
 		var name string
 		if m.conv == nil {
 			name = strings.ToUpper(k[:1]) + k[1:]
@@ -56,11 +58,12 @@ func (m mapper) unpackStruct(pv reflect.Value) error {
 	return nil
 }
 
-func (m mapper) unpackMap(pv reflect.Value) error {
+func (m *mapper) unpackMap(pv reflect.Value) error {
 	iv := reflect.Indirect(pv)
 	mv := reflect.MakeMap(iv.Type())
 	iv.Set(mv)
-	for k, v := range m.columns {
+	for i, k := range m.keys {
+		v := m.values[i]
 		iv.SetMapIndex(reflect.ValueOf(k), reflect.Indirect(reflect.ValueOf(v)))
 	}
 	return nil

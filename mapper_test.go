@@ -6,28 +6,33 @@ import (
 )
 
 func TestUnpackStruct(t *testing.T) {
-	m := map[string]interface{}{
-		"ab_c": int64(9),
-		"c_d":  "hello",
-		"e":    "unsettable",
-		"f":    []uint8("uint8str"),
-		"g":    []uint8("uint8data"),
+	keys := []string{"ab_c", "c_d", "e", "f", "g"}
+	vals := []interface{}{
+		int64(9),
+		"hello",
+		"unsettable",
+		[]uint8("uint8str"),
+		[]uint8("uint8data"),
 	}
-	type out struct {
+	mppr := &mapper{
+		keys:   keys,
+		values: vals,
+		conv:   SnakeCaseConverter,
+	}
+
+	// Unpack struct
+	var v struct {
 		AbC int64
 		CD  string
 		e   string
 		F   string
 		G   []byte
 	}
-
-	// Unpack struct
-	var v out
-	err := mapper{m, SnakeCaseConverter}.unpack(v)
+	err := mppr.unpack(v)
 	if err == nil {
 		t.Fatal("should return error")
 	}
-	err = mapper{m, SnakeCaseConverter}.unpack(&v)
+	err = mppr.unpack(&v)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,49 +54,52 @@ func TestUnpackStruct(t *testing.T) {
 }
 
 func TestUnpackMap(t *testing.T) {
-	m := map[string]interface{}{
-		"ab_c": int64(9),
-		"c_d":  "hello",
-		"e":    "unsettable",
+	keys := []string{"ab_c", "c_d", "e"}
+	vals := []interface{}{int64(9), "hello", "unsettable"}
+	m := make(map[string]interface{})
+	for i, k := range keys {
+		m[k] = vals[i]
 	}
-	type out struct {
-		AbC int64
-		CD  string
-		e   string
+	mppr := &mapper{
+		keys:   keys,
+		values: vals,
+		conv:   SnakeCaseConverter,
 	}
+
 	var m2 map[string]interface{}
-	err := mapper{m, SnakeCaseConverter}.unpack(&m2)
+	err := mppr.unpack(&m2)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(m, m2) {
-		t.Fatalf("%v\n\n%v\n", m, m2)
+		t.Log(m)
+		t.Log(m2)
+		t.Fatal("not equal")
 	}
 }
 
 func TestUnpackStructSlice(t *testing.T) {
-	m := map[string]interface{}{
-		"A": int64(1),
-		"B": "hello",
+	k1 := []string{"A", "B"}
+	v1 := []interface{}{int64(1), "hello"}
+	v2 := []interface{}{int64(2), "hello2"}
+	mppr := &mapper{
+		keys:   k1,
+		values: v1,
+		conv:   SnakeCaseConverter,
 	}
-	m2 := map[string]interface{}{
-		"A": int64(2),
-		"B": "hello2",
-	}
+
 	// Unpack struct slice
 	var v []struct {
 		A int64
 		B string
 	}
-	err := mapper{m, SnakeCaseConverter}.unpack(v)
-	if err == nil {
-		t.Fatal("should return error")
-	}
-	err = mapper{m, SnakeCaseConverter}.unpack(&v)
+	err := mppr.unpack(&v)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	err = mapper{m2, SnakeCaseConverter}.unpack(&v)
+
+	mppr.values = v2
+	err = mppr.unpack(&v)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
