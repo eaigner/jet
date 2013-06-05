@@ -40,14 +40,17 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 	if r.expand {
 		query, args = substituteMapAndArrayMarks(r.query, r.args...)
 	}
-	// Log
 	r.logQuery(query, args)
-	// Query
 	rows, err := r.qo.Query(query, args...)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
+
+	if v == nil {
+		return nil
+	}
+
 	cols, err := rows.Columns()
 	if err != nil {
 		return err
