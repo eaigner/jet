@@ -44,7 +44,7 @@ func (m mapper) unpackStruct(pv reflect.Value) error {
 	for k, v := range m.columns {
 		var name string
 		if m.conv == nil {
-			name = strings.Title(k) // At least the first letter needs to be upper case
+			name = strings.ToUpper(k[:1]) + k[1:]
 		} else if m.conv != nil {
 			name = m.conv.ColumnToFieldName(k)
 		}
