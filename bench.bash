@@ -1,2 +1,2 @@
 #!/bin/bash
-go test -bench . -benchtime 30s -cpuprofile cpu.out
+go test -bench . -benchtime 10s -cpuprofile cpu.out
