@@ -25,6 +25,7 @@ func TestDb(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
 	var mv map[string]interface{}
 	err = db.Query(`INSERT INTO "table" ( "a", "b" ) VALUES ( $1, $2 ) RETURNING "a"`, "hello", 7).Rows(&mv)
 	if err != nil {
@@ -37,7 +38,10 @@ func TestDb(t *testing.T) {
 	if !ok || string(x) != "hello" {
 		t.Fatal(x)
 	}
-	var sv struct{ A string }
+
+	var sv struct {
+		A string
+	}
 	err = db.Query(`INSERT INTO "table" ( "a", "b" ) VALUES ( $1, $2 ) RETURNING "a"`, "hello2", 8).Rows(&sv)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -45,11 +49,11 @@ func TestDb(t *testing.T) {
 	if x := sv.A; x != "hello2" {
 		t.Fatal(x)
 	}
-	type data struct {
+
+	var sv2 []struct {
 		A string
-		B int64
+		B int16
 	}
-	var sv2 []data
 	err = db.Query(`SELECT * FROM "table"`).Rows(&sv2)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -63,7 +67,11 @@ func TestDb(t *testing.T) {
 	if x := sv2[1]; x.A != "hello2" || x.B != 8 {
 		t.Fatal(x)
 	}
-	var sv3 []data
+
+	var sv3 []struct {
+		A string
+		B int64
+	}
 	err = db.Query(`SELECT * FROM "table"`).Rows(&sv3, 1)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -75,7 +83,7 @@ func TestDb(t *testing.T) {
 		t.Fatal(x)
 	}
 
-	// Test Value()
+	// Single value
 	var b int64
 	err = db.Query(`INSERT INTO "table" ( "a", "b" ) VALUES ( $1, $2 ) RETURNING "b"`, "hellov", 101).Value(&b)
 	if err != nil {

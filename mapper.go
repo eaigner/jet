@@ -78,6 +78,6 @@ func setValue(i interface{}, v reflect.Value) {
 			v.Set(reflect.ValueOf(i))
 		}
 	default:
-		v.Set(reflect.ValueOf(i))
+		v.Set(reflect.ValueOf(i).Convert(v.Type()))
 	}
 }
