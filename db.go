@@ -53,5 +53,7 @@ func (d *db) Begin() (Tx, error) {
 func (d *db) Query(query string, args ...interface{}) Queryable {
 	d.query = query
 	d.args = args
-	return d
+	r := &runner{}
+	*r = d.runner
+	return r
 }
