@@ -19,6 +19,7 @@ type runner struct {
 	args   []interface{}
 	errors []error
 	logger *Logger
+	lru    *lruCache
 }
 
 func (r *runner) copy() *runner {
@@ -28,16 +29,31 @@ func (r *runner) copy() *runner {
 }
 
 func (r *runner) prepare(query string) Queryable {
-	if r.query == query && r.stmt != nil {
-		return r
+	if r.lru == nil {
+		r.lru = newLRUCache(20)
 	}
-	var err error
-	r.stmt, err = r.qo.Prepare(query)
-	if err != nil {
-		panic(err)
-	}
+	lruKey := r.txnId + query
+	r.stmt = r.lru.get(lruKey)
 	r.query = query
+	if r.stmt == nil {
+		var err error
+		r.stmt, err = r.qo.Prepare(query)
+		if err != nil {
+			r.onErr(err)
+			// panic(err)
+		} else {
+			r.lru.set(lruKey, r.stmt)
+		}
+	}
 	return r
+}
+
+func (r *runner) onErr(err error) error {
+	if err != nil {
+		r.errors = append(r.errors, err)
+		r.lru.reset()
+	}
+	return err
 }
 
 func (r *runner) Query(query string, args ...interface{}) Queryable {
@@ -70,18 +86,18 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 	)
 	if v == nil {
 		_, err = r.stmt.Exec(r.args...)
-		return err
+		return r.onErr(err)
 
 	} else {
 		rows, err = r.stmt.Query(r.args...)
 		if err != nil {
-			return err
+			return r.onErr(err)
 		}
 		defer rows.Close()
 	}
 	cols, err := rows.Columns()
 	if err != nil {
-		return err
+		return r.onErr(err)
 	}
 	var i int64 = 0
 	mppr := &mapper{
@@ -103,13 +119,13 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 		}
 		err := rows.Scan(cont...)
 		if err != nil {
-			return err
+			return r.onErr(err)
 		}
 
 		// Map values
 		err = mppr.unpack(cols, cont, v)
 		if err != nil {
-			return err
+			return r.onErr(err)
 		}
 		i++
 	}
@@ -120,10 +136,10 @@ func (r *runner) Value(v interface{}) error {
 	var m map[string]interface{}
 	err := r.Rows(&m, 1)
 	if err != nil {
-		return err
+		return r.onErr(err)
 	}
 	if x := len(m); x != 1 {
-		return fmt.Errorf("expected 1 column for Value(), got %d columns (%v)", x, m)
+		return r.onErr(fmt.Errorf("expected 1 column for Value(), got %d columns (%v)", x, m))
 	}
 	var first interface{}
 	for _, v := range m {
