@@ -1,78 +1,67 @@
-Jet is a super-flexible lightweight SQL interface
+Jet is a super-flexible lightweight SQL interface ([GoDoc](http://godoc.org/github.com/eaigner/jet))
 
-Documentation on [GoDoc](http://godoc.org/github.com/eaigner/jet)
+Features:
 
-## Example
+  - LRU query cache for superfast queries
+  - Unpack query results to any format
+  - Can expand queries for map and slice arguments (e.g. `$1` to `$1, $2, $3`, useful for hstore or set membership queries)
+  - Serializes hstore columns to maps
+  - Simple migration API
+  - Customizable column name mapper
 
-```go
-func main() {
-  // Open database
-  db, err := jet.Open("postgres", "user=postgres dbname=jet sslmode=disable")
-  if err != nil {
-    panic(err)
-  }
+### Open
 
-  // Set a logger
-  db.SetLogger(jet.NewLogger(os.Stdout))
+    db, err := jet.Open("postgres", "...")
 
-  // Create a migration suite
-  var s jet.Suite
-  s.AddSQL(
-    `CREATE EXTENSION IF NOT EXISTS hstore`,
-    `DROP EXTENSION IF EXISTS hstore`,
-  )
-  s.AddSQL(
-    `CREATE TABLE "fruits" ( id serial, name text, attrs hstore )`,
-    `DROP TABLE "fruits"`,
-  )
-  s.AddSQL(
-    `CREATE INDEX "fruits_name_index" ON "fruits" ( "name" )`,
-    `DROP INDEX "fruits_name_index"`,
-  )
+### Insert Rows
 
-  // Run all migrations. The current migration version is stored, already applied migrations are not run twice!
-  if err, _ := s.Migrate(db); err != nil {
-    panic(err)
-  }
+    db.Query(`INSERT INTO "fruits" ( "name", "price" ) VALUES ( $1, $2 )`, "banana", 2.99).Run()
 
-  // Insert rows using a transaction
-  txn, err := db.Begin()
-  if err != nil {
-    panic(err)
-  }
-  txn.Query(
-    `INSERT INTO "fruits" ( "name", "attrs" ) VALUES ( $1, $2 )`,
-    "banana",
-    map[string]interface{}{"color": "yellow", "price": 2},
-  ).Run()
-  txn.Query(
-    `INSERT INTO "fruits" ( "name", "attrs" ) VALUES ( $1, $2 )`,
-    "orange",
-    map[string]interface{}{"color": "orange", "price": 1},
-  ).Run()
-  txn.Query(
-    `INSERT INTO "fruits" ( "name", "attrs" ) VALUES ( $1, $2 )`,
-    "grape",
-    map[string]interface{}{"color": "green", "price": 3},
-  ).Run()
-  if err = txn.Commit(); err != nil {
-    panic(err)
-  }
+Run is Jet's `Exec` equivalent and is used instead of `Rows()` when no return values are expected
 
-  // Select some rows
-  var fruits []struct {
-    Name  string
-    Attrs map[string]interface{}
-  }
-  if err := db.Query(`SELECT * FROM "fruits"`).Rows(&fruits); err != nil {
-    panic(err)
-  }
+### Query Rows
 
-  fmt.Println("FRUITS:", fruits)
+    var rows []*struct{
+      Name  string
+      Price int
+    }
+    db.Query(`SELECT * FROM "fruits"`).Rows(&rows)
 
-  // Reset db
-  if err, _ := s.Reset(db); err != nil {
-    panic(err)
-  }
-}
-```
+Jet's column mapper is very powerful. It tries to map the columns to any value you provide. You're not required to use a fixed output format. In this case `rows` could be anything e.g `struct`, `*struct`, `[]struct`, `[]*struct`, `Type`, `*Type`, `[]Type`, `[]*Type` or just simple values like `int` or `*int`. You get the idea.
+
+### Query Value
+
+Jet provides a convenience method if the returned row is e.g. an aggregation result. You can use `Value()` to quickly get the value of the first column and row
+
+    var count int
+    db.Query(`SELECT COUNT(*) FROM "fruits"`).Value(&count)
+
+### Hstore
+
+Jet can also deserialize hstore columns for you. In this case the `header` column is a `hstore` value.
+
+    var out struct{
+      Header  map[string]interface{}
+      Body    string
+    }
+    db.Query(`SELECT * FROM "emails"`).Rows(&out)
+
+### Map and Slice Expansion
+
+If you want to do e.g. hstore inserts or set membership queries, Jet can automatically expand the query and adjust the argument list for you.
+
+Passing in a **map** argument
+
+    db.Query(`INSERT INTO "emails" ( "header", "body" ) VALUES ( $1, $2 )`, aMap, aBody).Run()
+
+will expanded the query to
+
+    INSERT INTO "emails" ( "header", "body" ) VALUES ( hstore(ARRAY[ $1, $2, $3, $4 ... ]), $5 )
+
+Passing in a **slice** argument
+
+    db.Query(`SELECT * FROM "files" WHERE "files"."name" IN ( $1 )`, aSlice)
+
+will expand the query to
+
+    SELECT * FROM "files" WHERE "files"."name" IN ( $1, $2, $3, ... )
