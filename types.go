@@ -34,8 +34,6 @@ type Tx interface {
 	Commit() error
 	// Rollback rolls back the transaction
 	Rollback() error
-	// Errors returns all errors that occurred during the transaction
-	Errors() []error
 }
 
 type Queryable interface {
@@ -54,6 +52,5 @@ type Queryable interface {
 }
 
 type queryObject interface {
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	Exec(query string, args ...interface{}) (sql.Result, error)
+	Prepare(query string) (*sql.Stmt, error)
 }

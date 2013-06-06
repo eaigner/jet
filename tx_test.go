@@ -10,7 +10,7 @@ import (
 func TestTx(t *testing.T) {
 	db, err := Open("postgres", "user=postgres dbname=jet sslmode=disable")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err)
 	}
 	l := NewLogger(os.Stdout)
 	db.SetLogger(l)
@@ -19,11 +19,11 @@ func TestTx(t *testing.T) {
 	}
 	err = db.Query(`DROP TABLE IF EXISTS "tx_table"`).Run()
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 	err = db.Query(`CREATE TABLE "tx_table" ( "a" text, "b" integer )`).Run()
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 	tx, err := db.Begin()
 	if err != nil {
@@ -46,10 +46,7 @@ func TestTx(t *testing.T) {
 	}
 	err = tx.Commit()
 	if err != nil {
-		t.Fatal(err.Error())
-	}
-	if x := len(tx.Errors()); x != 2 {
-		t.Fatalf("should report %d errors, has %d", 2, x)
+		t.Fatal(err)
 	}
 
 	// Rollback
@@ -59,7 +56,7 @@ func TestTx(t *testing.T) {
 	}
 	err = tx.Query(`INSERT INTO "tx_table" ( "a", "b" ) VALUES ( $1, $2 )`, "roll-me-back", 14).Run()
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 	err = tx.Rollback()
 	if err != nil {

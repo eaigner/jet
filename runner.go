@@ -10,19 +10,33 @@ import (
 type runner struct {
 	db     *sql.DB
 	tx     *sql.Tx
+	stmt   *sql.Stmt
 	qo     queryObject
 	conv   ColumnConverter
 	expand bool
 	txnId  string
 	query  string
 	args   []interface{}
+	errors []error
 	logger *Logger
 }
 
 func (r *runner) Query(query string, args ...interface{}) Queryable {
-	r.query = query
-	r.args = args
-	return r
+	// Expand map and slice markers
+	if r.expand {
+		query, args = substituteMapAndArrayMarks(query, args...)
+	}
+	rc := new(runner)
+	*rc = *r
+	stmt, err := r.qo.Prepare(query)
+	if err != nil {
+		rc.errors = append(rc.errors, err)
+		return rc
+	}
+	rc.stmt = stmt
+	rc.query = query
+	rc.args = args
+	return rc
 }
 
 func (r *runner) Run() error {
@@ -30,33 +44,32 @@ func (r *runner) Run() error {
 }
 
 func (r *runner) Rows(v interface{}, maxRows ...int64) error {
+	if len(r.errors) > 0 {
+		return r.errors[0]
+	}
 	// Determine max rows
 	var max int64 = -1
 	if len(maxRows) > 0 {
 		max = maxRows[0]
 	}
-	// Expand map and slice markers
-	query, args := r.query, r.args
-	if r.expand {
-		query, args = substituteMapAndArrayMarks(r.query, r.args...)
+	if r.Logger() != nil {
+		r.logQuery()
 	}
-	r.logQuery(query, args)
 	var (
 		rows *sql.Rows
 		err  error
 	)
 	if v == nil {
-		_, err = r.qo.Exec(query, args...)
+		_, err = r.stmt.Exec(r.args...)
 		return err
 
 	} else {
-		rows, err = r.qo.Query(query, args...)
+		rows, err = r.stmt.Query(r.args...)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 	}
-
 	cols, err := rows.Columns()
 	if err != nil {
 		return err
@@ -122,32 +135,31 @@ func (r *runner) SetLogger(l *Logger) {
 	r.logger = l
 }
 
-func (r *runner) logQuery(rquery string, rargs []interface{}) {
-	if l := r.Logger(); l != nil {
-		if r.txnId != "" {
-			l.Txnf("         %s: ", r.txnId[:7])
-		}
-		l.Queryf(rquery)
-		args := []string{}
-		for _, a := range rargs {
-			var buf []byte
-			switch t := a.(type) {
-			case []uint8:
-				buf = t
-				if len(buf) > 5 {
-					buf = buf[:5]
-				}
-			}
-			if buf != nil {
-				args = append(args, fmt.Sprintf(`<buf:%x...>`, buf))
-			} else {
-				args = append(args, fmt.Sprintf(`"%v"`, a))
-			}
-
-		}
-		if len(rargs) > 0 {
-			l.Argsf(" [%s]", strings.Join(args, ", "))
-		}
-		l.Println()
+func (r *runner) logQuery() {
+	l := r.Logger()
+	if r.txnId != "" {
+		l.Txnf("         %s: ", r.txnId[:7])
 	}
+	l.Queryf(r.query)
+	args := []string{}
+	for _, a := range r.args {
+		var buf []byte
+		switch t := a.(type) {
+		case []uint8:
+			buf = t
+			if len(buf) > 5 {
+				buf = buf[:5]
+			}
+		}
+		if buf != nil {
+			args = append(args, fmt.Sprintf(`<buf:%x...>`, buf))
+		} else {
+			args = append(args, fmt.Sprintf(`"%v"`, a))
+		}
+
+	}
+	if len(r.args) > 0 {
+		l.Argsf(" [%s]", strings.Join(args, ", "))
+	}
+	l.Println()
 }

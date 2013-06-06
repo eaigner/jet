@@ -9,7 +9,7 @@ func Open(driverName, dataSourceName string) (Db, error) {
 	if err != nil {
 		return nil, err
 	}
-	v := &db{}
+	v := new(db)
 	v.runner.db = db2
 	v.runner.qo = db2
 	return v, nil
@@ -36,24 +36,14 @@ func (d *db) Begin() (Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	t := &tx{}
+	t := new(tx)
+	t.runner = d.runner
 	t.tx = tx2
 	t.qo = tx2
-	t.conv = d.conv
-	t.logger = d.logger
 	t.txnId = newAlphanumericId(40) // TODO(erik): possible performance bottleneck!
-
 	if l := d.Logger(); l != nil {
 		t.SetLogger(l)
 		l.Txnf("BEGIN    %s", t.txnId).Println()
 	}
 	return t, nil
-}
-
-func (d *db) Query(query string, args ...interface{}) Queryable {
-	d.query = query
-	d.args = args
-	r := &runner{}
-	*r = d.runner
-	return r
 }
