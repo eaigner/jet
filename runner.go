@@ -21,22 +21,31 @@ type runner struct {
 	logger *Logger
 }
 
+func (r *runner) copy() *runner {
+	c := new(runner)
+	*c = *r
+	return c
+}
+
+func (r *runner) prepare(query string) Queryable {
+	if r.query == query && r.stmt != nil {
+		return r
+	}
+	var err error
+	r.stmt, err = r.qo.Prepare(query)
+	if err != nil {
+		panic(err)
+	}
+	r.query = query
+	return r
+}
+
 func (r *runner) Query(query string, args ...interface{}) Queryable {
-	// Expand map and slice markers
 	if r.expand {
 		query, args = substituteMapAndArrayMarks(query, args...)
 	}
-	rc := new(runner)
-	*rc = *r
-	stmt, err := r.qo.Prepare(query)
-	if err != nil {
-		rc.errors = append(rc.errors, err)
-		return rc
-	}
-	rc.stmt = stmt
-	rc.query = query
-	rc.args = args
-	return rc
+	r.args = args
+	return r.prepare(query)
 }
 
 func (r *runner) Run() error {

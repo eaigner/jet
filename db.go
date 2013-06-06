@@ -10,8 +10,8 @@ func Open(driverName, dataSourceName string) (Db, error) {
 		return nil, err
 	}
 	v := new(db)
-	v.runner.db = db2
-	v.runner.qo = db2
+	v.db = db2
+	v.qo = db2
 	return v, nil
 }
 

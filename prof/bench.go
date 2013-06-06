@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime/pprof"
 	"sync"
+	"time"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
@@ -43,8 +44,11 @@ func run() {
 		log.Fatal(err)
 	}
 	n := 20
-	loops := 10000000
+	loops := 100000
 	nloops := loops / n
+
+	start := time.Now()
+	log.Println("BENCH STARTED")
 
 	var wg sync.WaitGroup
 	for i := 0; i < n; i++ {
@@ -63,4 +67,7 @@ func run() {
 		}()
 	}
 	wg.Wait()
+
+	diff := time.Now().Sub(start)
+	log.Printf("BENCH FINISHED: %fs", diff.Seconds())
 }
