@@ -40,7 +40,7 @@ func (d *db) Begin() (Tx, error) {
 	t.runner = d.runner
 	t.tx = tx2
 	t.qo = tx2
-	t.txnId = newAlphanumericId(40) // TODO(erik): possible performance bottleneck!
+	t.txnId = newAlphanumericId(28)
 	if l := d.Logger(); l != nil {
 		t.SetLogger(l)
 		l.Txnf("BEGIN    %s", t.txnId).Println()
