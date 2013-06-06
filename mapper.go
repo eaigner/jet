@@ -8,64 +8,88 @@ import (
 )
 
 type mapper struct {
-	keys   []string
-	values []interface{}
-	conv   ColumnConverter
+	conv ColumnConverter
 }
 
-func (m *mapper) unpack(v interface{}) error {
-	pv := reflect.ValueOf(v)
-	if pv.Kind() != reflect.Ptr {
-		return fmt.Errorf("cannot unpack result to non-pointer (%s)", pv.Type().String())
+func (m *mapper) unpack(keys []string, values []interface{}, out interface{}) error {
+	val := reflect.ValueOf(out)
+	if val.Kind() != reflect.Ptr {
+		return fmt.Errorf("cannot unpack result to non-pointer (%s)", val.Type().String())
 	}
-	return m.unpackValue(pv)
+	return m.unpackValue(keys, values, val)
 }
 
-func (m *mapper) unpackValue(pv reflect.Value) error {
-	switch pv.Kind() {
+func (m *mapper) unpackValue(keys []string, values []interface{}, out reflect.Value) error {
+	switch out.Kind() {
 	case reflect.Ptr:
-		return m.unpackValue(pv.Elem())
-	case reflect.Struct:
-		return m.unpackStruct(pv)
-	case reflect.Map:
-		return m.unpackMap(pv)
-	case reflect.Slice:
-		sv := reflect.New(pv.Type().Elem()).Elem()
-		err := m.unpackValue(sv)
-		if err != nil {
-			return err
+		if out.IsNil() {
+			out.Set(reflect.New(out.Type().Elem()))
 		}
-		pv.Set(reflect.Append(pv, sv))
-		return nil
+		return m.unpackValue(keys, values, reflect.Indirect(out))
+	case reflect.Slice:
+		if keys == nil {
+			return m.unpackSimple(nil, values, out)
+		} else {
+			return m.unpackSlice(keys, values, out)
+		}
+	case reflect.Struct:
+		return m.unpackStruct(keys, values, out)
+	case reflect.Map:
+		if keys == nil {
+			return m.unpackSimple(nil, values, out)
+		} else {
+			return m.unpackMap(keys, values, out)
+		}
+	default:
+		return m.unpackSimple(nil, values, out)
 	}
-	return fmt.Errorf("cannot unpack result to %s (%s)", pv.Type().String(), pv.Kind())
+	return fmt.Errorf("cannot unpack result to %T (%s)", out, out.Kind())
 }
 
-func (m *mapper) unpackStruct(pv reflect.Value) error {
-	iv := reflect.Indirect(pv)
-	for i, k := range m.keys {
-		v := m.values[i]
-		var name string
+func (m *mapper) unpackSlice(keys []string, values []interface{}, out reflect.Value) error {
+	elemTyp := reflect.Indirect(reflect.New(out.Type().Elem()))
+	m.unpackValue(keys, values, elemTyp)
+	out.Set(reflect.Append(out, elemTyp))
+	return nil
+}
+
+func (m *mapper) unpackStruct(keys []string, values []interface{}, out reflect.Value) error {
+	for i, k := range keys {
+		var convKey string
 		if m.conv == nil {
-			name = strings.ToUpper(k[:1]) + k[1:]
+			convKey = strings.ToUpper(k[:1]) + k[1:]
 		} else if m.conv != nil {
-			name = m.conv.ColumnToFieldName(k)
+			convKey = m.conv.ColumnToFieldName(k)
 		}
-		if f := iv.FieldByName(name); f.IsValid() {
-			setValue(reflect.Indirect(reflect.ValueOf(v)), f)
+		field := out.FieldByName(convKey)
+		if field.IsValid() {
+			m.unpackValue(nil, values[i:i+1], field)
 		}
 	}
 	return nil
 }
 
-func (m *mapper) unpackMap(pv reflect.Value) error {
-	iv := reflect.Indirect(pv)
-	mv := reflect.MakeMap(iv.Type())
-	iv.Set(mv)
-	for i, k := range m.keys {
-		v := m.values[i]
-		iv.SetMapIndex(reflect.ValueOf(k), reflect.Indirect(reflect.ValueOf(v)))
+func (m *mapper) unpackMap(keys []string, values []interface{}, out reflect.Value) error {
+	if out.IsNil() {
+		out.Set(reflect.MakeMap(out.Type()))
 	}
+	for i, k := range keys {
+		elemTyp := reflect.Indirect(reflect.New(out.Type().Elem()))
+		m.unpackValue(nil, values[i:i+1], elemTyp)
+		out.SetMapIndex(reflect.ValueOf(k), elemTyp)
+	}
+
+	return nil
+}
+
+func (m *mapper) unpackSimple(keys []string, values []interface{}, out reflect.Value) error {
+	if !out.IsValid() {
+		panic("cannot unpack to zero value")
+	}
+	if len(values) != 1 {
+		panic("cannot unpack to simple value, invalid values input")
+	}
+	setValue(reflect.Indirect(reflect.ValueOf(values[0])), out)
 	return nil
 }
 

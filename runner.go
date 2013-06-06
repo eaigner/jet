@@ -85,7 +85,6 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 	}
 	var i int64 = 0
 	mppr := &mapper{
-		keys: cols,
 		conv: r.conv,
 	}
 	for {
@@ -108,8 +107,7 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 		}
 
 		// Map values
-		mppr.values = cont
-		err = mppr.unpack(v)
+		err = mppr.unpack(cols, cont, v)
 		if err != nil {
 			return err
 		}

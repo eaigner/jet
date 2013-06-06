@@ -34,6 +34,8 @@ func TestDb(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		t.Log("map unpack")
+
 		var mv map[string]interface{}
 		switch driverName {
 		case "postgres":
@@ -54,6 +56,8 @@ func TestDb(t *testing.T) {
 			}
 		}
 
+		t.Log("struct unpack")
+
 		var sv struct {
 			A string
 		}
@@ -71,6 +75,8 @@ func TestDb(t *testing.T) {
 				t.Fatal(x)
 			}
 		}
+
+		t.Log("struct slice unpack")
 
 		var sv2 []struct {
 			A string
@@ -90,6 +96,8 @@ func TestDb(t *testing.T) {
 			t.Fatal(x)
 		}
 
+		t.Log("struct slice unpack 2")
+
 		var sv3 []struct {
 			A string
 			B int64
@@ -105,7 +113,8 @@ func TestDb(t *testing.T) {
 			t.Fatal(x)
 		}
 
-		// Single value
+		t.Log("single value")
+
 		var b int64
 		switch driverName {
 		case "postgres":
