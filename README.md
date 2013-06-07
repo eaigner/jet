@@ -27,7 +27,7 @@ Run is Jet's `Exec` equivalent and is used instead of `Rows()` when no return va
     }
     db.Query(`SELECT * FROM "fruits"`).Rows(&rows)
 
-Jet's column mapper is very powerful. It tries to map the columns to any value you provide. You're not required to use a fixed output format. In this case `rows` could be anything e.g `struct`, `*struct`, `[]struct`, `[]*struct`, `Type`, `*Type`, `[]Type`, `[]*Type` or just simple values like `int` or `*int`. You get the idea.
+Jet's column mapper is very powerful. It tries to map the columns to any value you provide. You're not required to use a fixed output format. In this case `rows` could be anything e.g `struct`, `*struct`, `[]struct`, `[]*struct`, `Type`, `*Type`, `[]Type`, `[]*Type` even `map[string]interface{}` or just simple values like `int` or `*int`. You get the idea.
 
 ### Query Value
 
