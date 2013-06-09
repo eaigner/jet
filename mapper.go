@@ -94,7 +94,12 @@ func (m *mapper) unpackSimple(keys []string, values []interface{}, out reflect.V
 }
 
 func convertAndSet(f interface{}, to reflect.Value) {
-	to.Set(reflect.ValueOf(f).Convert(to.Type()))
+	from := reflect.ValueOf(f)
+	if from.IsValid() {
+		to.Set(from.Convert(to.Type()))
+	} else {
+		to.Set(reflect.Zero(to.Type()))
+	}
 }
 
 func setValue(from, to reflect.Value) {

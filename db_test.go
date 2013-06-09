@@ -133,6 +133,49 @@ func TestDb(t *testing.T) {
 	}
 }
 
+func TestNull(t *testing.T) {
+	drivers := map[string]string{
+		"postgres": "user=postgres dbname=jet sslmode=disable",
+	}
+	for driverName, driverSource := range drivers {
+		t.Log(driverName)
+
+		db, err := Open(driverName, driverSource)
+		if err != nil {
+			t.Fatal(err)
+		}
+		db.SetLogger(NewLogger(os.Stdout))
+		db.SetColumnConverter(SnakeCaseConverter)
+
+		err = db.Query(`DROP TABLE IF EXISTS jetNullTest`).Run()
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = db.Query(`CREATE TABLE jetNullTest ( a VARCHAR(100) )`).Run()
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = db.Query(`INSERT INTO jetNullTest ( a ) VALUES ( NULL )`).Run()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var rows []struct {
+			A string
+		}
+		err = db.Query(`SELECT * FROM jetNullTest`).Rows(&rows)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if x := len(rows); x != 1 {
+			t.Fatal(x)
+		}
+		if x := rows[0].A; x != "" {
+			t.Fatal(x)
+		}
+	}
+}
+
 func BenchmarkQueryRows(b *testing.B) {
 	db, err := Open("postgres", "user=postgres dbname=jet sslmode=disable")
 	if err != nil {
