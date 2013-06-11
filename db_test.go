@@ -1,8 +1,8 @@
 package jet
 
 import (
-	_ "github.com/bmizerany/pq"
 	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 	"os"
 	"testing"
 )

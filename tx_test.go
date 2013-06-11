@@ -1,7 +1,7 @@
 package jet
 
 import (
-	_ "github.com/bmizerany/pq"
+	_ "github.com/lib/pq"
 	"os"
 	"testing"
 	"time"
