@@ -3,7 +3,6 @@ package jet
 import (
 	"database/sql"
 	"fmt"
-	"reflect"
 	"strings"
 )
 
@@ -129,24 +128,6 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 		}
 		i++
 	}
-	return nil
-}
-
-func (r *runner) Value(v interface{}) error {
-	var m map[string]interface{}
-	err := r.Rows(&m, 1)
-	if err != nil {
-		return r.onErr(err)
-	}
-	if x := len(m); x != 1 {
-		return r.onErr(fmt.Errorf("expected 1 column for Value(), got %d columns (%v)", x, m))
-	}
-	var first interface{}
-	for _, v := range m {
-		first = v
-		break
-	}
-	setValue(reflect.ValueOf(first), reflect.ValueOf(v).Elem())
 	return nil
 }
 

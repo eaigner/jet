@@ -118,7 +118,7 @@ func TestDb(t *testing.T) {
 		var b int64
 		switch driverName {
 		case "postgres":
-			err = db.Query(`INSERT INTO jetTest ( a, b ) VALUES ( $1, $2 ) RETURNING b`, "hellov", 101).Value(&b)
+			err = db.Query(`INSERT INTO jetTest ( a, b ) VALUES ( $1, $2 ) RETURNING b`, "hellov", 101).Rows(&b)
 		case "mysql":
 			err = db.Query(`INSERT INTO jetTest ( a, b ) VALUES ( ?, ? )`, "hellov", 101).Run()
 		}

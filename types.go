@@ -43,8 +43,6 @@ type Queryable interface {
 	Run() error
 	// Rows runs the query writing the rows to the specified map or struct array. If maxRows is specified, only writes up to maxRows rows.
 	Rows(v interface{}, maxRows ...int64) error
-	// Value writes the value of the first row and column to the passed pointer. If the value cannot be converted to the specified type, the method will panic. This is useful for e.g. fetching aggregated values.
-	Value(v interface{}) error
 	// Logger returns the current logger
 	Logger() *Logger
 	// SetLogger sets a logger

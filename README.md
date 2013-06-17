@@ -29,13 +29,6 @@ Run is Jet's `Exec` equivalent and is used instead of `Rows()` when no return va
 
 Jet's column mapper is very powerful. It tries to map the columns to any value you provide. You're not required to use a fixed output format. In this case `rows` could be anything e.g `struct`, `*struct`, `[]struct`, `[]*struct`, `Type`, `*Type`, `[]Type`, `[]*Type` even `map[string]interface{}` or just simple values like `int` or `*int`. You get the idea.
 
-### Query Value
-
-Jet provides a convenience method if the returned row is e.g. an aggregation result. You can use `Value()` to quickly get the value of the first column and row
-
-    var count int
-    db.Query(`SELECT COUNT(*) FROM "fruits"`).Value(&count)
-
 ### Hstore
 
 Jet can also deserialize hstore columns for you. In this case the `header` column is a `hstore` value.

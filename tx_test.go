@@ -63,7 +63,7 @@ func TestTx(t *testing.T) {
 		t.Fatal(err)
 	}
 	var c int64
-	err = db.Query(`SELECT COUNT(*) FROM "tx_table"`).Value(&c)
+	err = db.Query(`SELECT COUNT(*) FROM "tx_table"`).Rows(&c)
 	if err != nil {
 		t.Fatal(err)
 	}
