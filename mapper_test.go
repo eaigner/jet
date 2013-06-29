@@ -31,13 +31,14 @@ func TestUnpackSimple(t *testing.T) {
 }
 
 func TestUnpackStruct(t *testing.T) {
-	keys := []string{"ab_c", "c_d", "e", "f", "g"}
+	keys := []string{"ab_c", "c_d", "e", "f", "g", "h"}
 	vals := []interface{}{
 		int64(9),
 		"hello",
 		"unsettable",
 		[]uint8("uint8str"),
 		[]uint8("uint8data"),
+		[]uint8("1"),
 	}
 	mppr := &mapper{
 		conv: SnakeCaseConverter,
@@ -49,6 +50,7 @@ func TestUnpackStruct(t *testing.T) {
 		e   string
 		F   string
 		G   []byte
+		H   bool
 	}
 	err := mppr.unpack(keys, vals, v)
 	if err == nil {
@@ -71,6 +73,9 @@ func TestUnpackStruct(t *testing.T) {
 		t.Fatal(x)
 	}
 	if x := v.G; string(x) != "uint8data" {
+		t.Fatal(x)
+	}
+	if x := v.H; x != true {
 		t.Fatal(x)
 	}
 }

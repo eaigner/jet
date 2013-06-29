@@ -106,6 +106,10 @@ func setValue(from, to reflect.Value) {
 	switch t := from.Interface().(type) {
 	case []uint8:
 		switch to.Interface().(type) {
+		case bool:
+			n, _ := strconv.ParseInt(string(t), 10, 32)
+			b := (n == 1)
+			convertAndSet(b, to)
 		case uint8, uint16, uint32, uint64, int8, int16, int32, int64:
 			n, _ := strconv.ParseInt(string(t), 10, 64)
 			convertAndSet(n, to)
