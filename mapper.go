@@ -105,22 +105,50 @@ func convertAndSet(f interface{}, to reflect.Value) {
 func setValue(from, to reflect.Value) {
 	switch t := from.Interface().(type) {
 	case []uint8:
-		switch to.Interface().(type) {
-		case bool:
-			n, _ := strconv.ParseInt(string(t), 10, 32)
-			b := (n == 1)
-			convertAndSet(b, to)
-		case uint8, uint16, uint32, uint64, int8, int16, int32, int64:
-			n, _ := strconv.ParseInt(string(t), 10, 64)
-			convertAndSet(n, to)
-		case string:
-			to.SetString(string(t))
-		case map[string]interface{}:
-			to.Set(reflect.ValueOf(parseHstoreColumn(string(t))))
-		default:
-			convertAndSet(t, to)
-		}
+		setValueFromBytes(t, to)
+	case int, int8, int16, int32, int64:
+		setValueFromInt(reflect.ValueOf(t).Int(), to)
+	case uint, uint8, uint16, uint32, uint64:
+		setValueFromUint(reflect.ValueOf(t).Uint(), to)
 	default:
 		convertAndSet(t, to)
+	}
+}
+
+func setValueFromBytes(t []uint8, to reflect.Value) {
+	switch to.Interface().(type) {
+	case bool:
+		n, _ := strconv.ParseInt(string(t), 10, 32)
+		convertAndSet(bool(n == 1), to)
+	case int, int8, int16, int32, int64:
+		n, _ := strconv.ParseInt(string(t), 10, 64)
+		convertAndSet(n, to)
+	case uint, uint8, uint16, uint32, uint64:
+		n, _ := strconv.ParseUint(string(t), 10, 64)
+		convertAndSet(n, to)
+	case string:
+		to.SetString(string(t))
+	case map[string]interface{}:
+		to.Set(reflect.ValueOf(parseHstoreColumn(string(t))))
+	default:
+		convertAndSet(t, to)
+	}
+}
+
+func setValueFromInt(i int64, to reflect.Value) {
+	switch to.Interface().(type) {
+	case bool:
+		convertAndSet(bool(i == 1), to)
+	default:
+		convertAndSet(i, to)
+	}
+}
+
+func setValueFromUint(i uint64, to reflect.Value) {
+	switch to.Interface().(type) {
+	case bool:
+		convertAndSet(bool(i == 1), to)
+	default:
+		convertAndSet(i, to)
 	}
 }
