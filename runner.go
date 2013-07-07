@@ -34,6 +34,9 @@ func (r *runner) prepare(query string) Queryable {
 	lruKey := r.txnId + query
 	r.stmt = r.lru.get(lruKey)
 	r.query = query
+	if r.Logger() != nil {
+		r.logQuery()
+	}
 	if r.stmt == nil {
 		var err error
 		r.stmt, err = r.qo.Prepare(query)
@@ -75,9 +78,6 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 	var max int64 = -1
 	if len(maxRows) > 0 {
 		max = maxRows[0]
-	}
-	if r.Logger() != nil {
-		r.logQuery()
 	}
 	var (
 		rows *sql.Rows
