@@ -98,22 +98,28 @@ func (s *Suite) Run(db Db, up bool, maxSteps int) (error, int64, int) {
 		}
 		txn, err := db.Begin()
 		if err != nil {
-			return err, -1, 0
+			return err, current, stepsApplied
 		}
 		next := m.Id
 		if up {
-			txn.Query(m.Up).Run()
+			err = txn.Query(m.Up).Run()
 		} else {
 			next--
-			txn.Query(m.Down).Run()
+			err = txn.Query(m.Down).Run()
+		}
+		if err != nil {
+			return err, current, stepsApplied
 		}
 		if current == -1 {
-			txn.Query(s.Stmts.InsertVersionSQL, next).Run()
+			err = txn.Query(s.Stmts.InsertVersionSQL, next).Run()
 		} else {
-			txn.Query(s.Stmts.UpdateVersionSQL, next, current).Run()
+			err = txn.Query(s.Stmts.UpdateVersionSQL, next, current).Run()
+		}
+		if err != nil {
+			return err, current, stepsApplied
 		}
 		if err := txn.Commit(); err != nil {
-			return err, -1, 0
+			return err, current, stepsApplied
 		}
 		current = next
 		stepsApplied++

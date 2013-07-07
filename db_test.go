@@ -10,7 +10,7 @@ import (
 func TestDb(t *testing.T) {
 	drivers := map[string]string{
 		"postgres": "user=postgres dbname=jet sslmode=disable",
-		"mysql":    "benchmarkdbuser:benchmarkdbpass@tcp(localhost:3306)/hello_world?charset=utf8", // TODO: change source
+		"mysql":    "root:@tcp(localhost:3306)/jet?charset=utf8", // TODO: change source
 	}
 	for driverName, driverSource := range drivers {
 		t.Log(driverName)
