@@ -22,3 +22,5 @@ _testmain.go
 *.exe
 jet.test
 cpu.out
+
+*.sublime-workspace
