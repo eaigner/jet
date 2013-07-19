@@ -16,7 +16,6 @@ type runner struct {
 	txnId  string
 	query  string
 	args   []interface{}
-	errors []error
 	logger *Logger
 	lru    *lruCache
 }
@@ -34,15 +33,11 @@ func (r *runner) prepare(query string) Queryable {
 	lruKey := r.txnId + query
 	r.stmt = r.lru.get(lruKey)
 	r.query = query
-	if r.Logger() != nil {
-		r.logQuery()
-	}
 	if r.stmt == nil {
 		var err error
 		r.stmt, err = r.qo.Prepare(query)
 		if err != nil {
 			r.onErr(err)
-			// panic(err)
 		} else {
 			r.lru.set(lruKey, r.stmt)
 		}
@@ -52,7 +47,6 @@ func (r *runner) prepare(query string) Queryable {
 
 func (r *runner) onErr(err error) error {
 	if err != nil {
-		r.errors = append(r.errors, err)
 		r.lru.reset()
 	}
 	return err
@@ -71,9 +65,6 @@ func (r *runner) Run() error {
 }
 
 func (r *runner) Rows(v interface{}, maxRows ...int64) error {
-	if len(r.errors) > 0 {
-		return r.errors[0]
-	}
 	// Determine max rows
 	var max int64 = -1
 	if len(maxRows) > 0 {
@@ -83,6 +74,9 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 		rows *sql.Rows
 		err  error
 	)
+	if r.Logger() != nil {
+		r.logQuery()
+	}
 	if v == nil {
 		_, err = r.stmt.Exec(r.args...)
 		return r.onErr(err)
