@@ -17,7 +17,6 @@ func TestCopy(t *testing.T) {
 		txnId:  "A",
 		query:  "B",
 		args:   []interface{}{"C"},
-		errors: []error{},
 		logger: NewLogger(nil),
 	}
 	r2 := r.copy()

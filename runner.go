@@ -7,17 +7,18 @@ import (
 )
 
 type runner struct {
-	db     *sql.DB
-	tx     *sql.Tx
-	stmt   *sql.Stmt
-	qo     queryObject
-	conv   ColumnConverter
-	expand bool
-	txnId  string
-	query  string
-	args   []interface{}
-	logger *Logger
-	lru    *lruCache
+	db      *sql.DB
+	tx      *sql.Tx
+	stmt    *sql.Stmt
+	qo      queryObject
+	conv    ColumnConverter
+	expand  bool
+	txnId   string
+	query   string
+	lastErr error
+	args    []interface{}
+	logger  *Logger
+	lru     *lruCache
 }
 
 func (r *runner) copy() *runner {
@@ -47,6 +48,7 @@ func (r *runner) prepare(query string) Queryable {
 
 func (r *runner) onErr(err error) error {
 	if err != nil {
+		r.lastErr = err
 		r.lru.reset()
 	}
 	return err
@@ -65,6 +67,13 @@ func (r *runner) Run() error {
 }
 
 func (r *runner) Rows(v interface{}, maxRows ...int64) error {
+	// Since Query doesn't return the error directly we do it here
+	if r.lastErr != nil {
+		err := r.lastErr
+		r.lastErr = nil
+		return err
+	}
+
 	// Determine max rows
 	var max int64 = -1
 	if len(maxRows) > 0 {
