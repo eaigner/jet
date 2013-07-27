@@ -67,10 +67,12 @@ func (r *runner) Run() error {
 }
 
 func (r *runner) Rows(v interface{}, maxRows ...int64) error {
+	// Always clear the error after we are done with Rows.
+	defer func() { r.lastErr = nil }()
+
 	// Since Query doesn't return the error directly we do it here
 	if r.lastErr != nil {
 		err := r.lastErr
-		r.lastErr = nil
 		return err
 	}
 
