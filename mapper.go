@@ -54,6 +54,11 @@ func (m *mapper) unpackSlice(keys []string, values []interface{}, out reflect.Va
 }
 
 func (m *mapper) unpackStruct(keys []string, values []interface{}, out reflect.Value) error {
+	// If no keys are passed in it's probably a struct field requiring
+	// a simple unpack like a time.Time struct field.
+	if len(keys) == 0 {
+		return m.unpackSimple(nil, values, out)
+	}
 	for i, k := range keys {
 		var convKey string
 		if m.conv == nil {
