@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type mapper struct {
@@ -115,6 +116,8 @@ func setValue(from, to reflect.Value) {
 		setValueFromInt(reflect.ValueOf(t).Int(), to)
 	case uint, uint8, uint16, uint32, uint64:
 		setValueFromUint(reflect.ValueOf(t).Uint(), to)
+	case time.Time:
+		setValueFromTime(t, to)
 	default:
 		convertAndSet(t, to)
 	}
@@ -155,5 +158,16 @@ func setValueFromUint(i uint64, to reflect.Value) {
 		convertAndSet(bool(i == 1), to)
 	default:
 		convertAndSet(i, to)
+	}
+}
+
+func setValueFromTime(t time.Time, to reflect.Value) {
+	switch to.Interface().(type) {
+	case int64:
+		convertAndSet(int64(t.Unix()), to)
+	case uint64:
+		convertAndSet(uint64(t.Unix()), to)
+	default:
+		convertAndSet(t, to)
 	}
 }
