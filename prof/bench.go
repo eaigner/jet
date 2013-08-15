@@ -1,8 +1,8 @@
 package main
 
 import (
-	jet ".."
 	"flag"
+	"github.com/eaigner/jet"
 	_ "github.com/go-sql-driver/mysql"
 	"log"
 	"os"
