@@ -4,11 +4,14 @@ import (
 	"database/sql"
 )
 
+// Tx represents a transaction instance.
+// It can be created using Begin on the *Db object.
 type Tx struct {
 	db *Db
 	tx *sql.Tx
 }
 
+// Query creates a prepared query that can be run with Rows or Run.
 func (t *Tx) Query(query string, args ...interface{}) Runnable {
 	return newQuery(t.tx, t.db).prepare(query, args...)
 }
