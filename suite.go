@@ -12,10 +12,6 @@ const (
 	ColumnName string = "version"
 )
 
-var (
-	EOM error = errors.New("EOM")
-)
-
 type Suite struct {
 	Migrations []*Migration
 	Stmts      *Stmts
