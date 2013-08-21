@@ -55,23 +55,23 @@ func (s *Suite) AddSQL(up, down string) {
 	})
 }
 
-func (s *Suite) Step(db Db) (error, int64, int) {
+func (s *Suite) Step(db *Db) (error, int64, int) {
 	return s.Run(db, true, 1)
 }
 
-func (s *Suite) Rollback(db Db) (error, int64, int) {
+func (s *Suite) Rollback(db *Db) (error, int64, int) {
 	return s.Run(db, false, 1)
 }
 
-func (s *Suite) Migrate(db Db) (error, int64, int) {
+func (s *Suite) Migrate(db *Db) (error, int64, int) {
 	return s.Run(db, true, math.MaxInt32)
 }
 
-func (s *Suite) Reset(db Db) (error, int64, int) {
+func (s *Suite) Reset(db *Db) (error, int64, int) {
 	return s.Run(db, false, math.MaxInt32)
 }
 
-func (s *Suite) Run(db Db, up bool, maxSteps int) (error, int64, int) {
+func (s *Suite) Run(db *Db, up bool, maxSteps int) (error, int64, int) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	if l := len(s.Migrations); l == 0 {

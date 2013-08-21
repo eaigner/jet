@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func openPg(t *testing.T) Db {
+func openPg(t *testing.T) *Db {
 	db, err := Open("postgres", "user=postgres dbname=jet sslmode=disable")
 	if err != nil {
 		t.Fatal(err)
@@ -29,7 +29,6 @@ func openPg(t *testing.T) Db {
 
 func TestIntPgRowUnpack(t *testing.T) {
 	db := openPg(t)
-	db.SetColumnConverter(SnakeCaseConverter)
 	err := db.Query(`DROP TABLE IF EXISTS jetTest`).Run()
 	if err != nil {
 		t.Fatal(err)
@@ -172,7 +171,6 @@ func TestIntPgTransaction(t *testing.T) {
 
 func TestIntPgNullValue(t *testing.T) {
 	db := openPg(t)
-	db.SetColumnConverter(SnakeCaseConverter)
 
 	err := db.Query(`DROP TABLE IF EXISTS jetNullTest`).Run()
 	if err != nil {
@@ -204,8 +202,6 @@ func TestIntPgNullValue(t *testing.T) {
 
 func TestIntPgHstoreQuery(t *testing.T) {
 	db := openPg(t)
-	db.ExpandMapAndSliceMarker(true)
-	db.SetColumnConverter(SnakeCaseConverter)
 	err := db.Query(`CREATE EXTENSION IF NOT EXISTS hstore`).Run()
 	if err != nil {
 		t.Fatal(err)
@@ -256,8 +252,6 @@ func TestIntPgHstoreQuery(t *testing.T) {
 
 func TestIntPgErrors(t *testing.T) {
 	db := openPg(t)
-	db.ExpandMapAndSliceMarker(true)
-	db.SetColumnConverter(SnakeCaseConverter)
 	err := db.Query(`DROP TABLE IF EXISTS "logtest"`).Run()
 	if err != nil {
 		t.Fatal(err)
