@@ -4,12 +4,6 @@ import (
 	"database/sql"
 )
 
-type Migration struct {
-	Up   string
-	Down string
-	Id   int64
-}
-
 type Runnable interface {
 	// Run runs the query without returning results
 	Run() error

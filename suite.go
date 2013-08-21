@@ -29,6 +29,14 @@ type Stmts struct {
 	UpdateVersionSQL string
 }
 
+// Migration represents a migration step with up and down SQL strings.
+type Migration struct {
+	Up   string
+	Down string
+	id   int
+}
+
+// Add adds a migration step to the suite.
 func (s *Suite) Add(m *Migration) {
 	if m == nil {
 		panic("nil migration")
@@ -41,13 +49,12 @@ func (s *Suite) Add(m *Migration) {
 			UpdateVersionSQL: fmt.Sprintf(`UPDATE "%s" SET "%s" = $1 WHERE "%s" = $2`, TableName, ColumnName, ColumnName),
 		}
 	}
-	if s.Migrations == nil {
-		s.Migrations = []*Migration{m}
-	} else {
-		s.Migrations = append(s.Migrations, m)
-	}
+
+	m.id = len(s.Migrations)
+	s.Migrations = append(s.Migrations, m)
 }
 
+// AddSQL is a shorthand for Add taking strings for the up and down SQL.
 func (s *Suite) AddSQL(up, down string) {
 	s.Add(&Migration{
 		Up:   up,
@@ -55,39 +62,45 @@ func (s *Suite) AddSQL(up, down string) {
 	})
 }
 
-func (s *Suite) Step(db *Db) (error, int64, int) {
+// Step applies 1 migration (upward).
+func (s *Suite) Step(db *Db) (int, int, error) {
 	return s.Run(db, true, 1)
 }
 
-func (s *Suite) Rollback(db *Db) (error, int64, int) {
+// Rollback rolls back 1 step.
+func (s *Suite) Rollback(db *Db) (int, int, error) {
 	return s.Run(db, false, 1)
 }
 
-func (s *Suite) Migrate(db *Db) (error, int64, int) {
+// Migrate applies all migrations.
+func (s *Suite) Migrate(db *Db) (int, int, error) {
 	return s.Run(db, true, math.MaxInt32)
 }
 
-func (s *Suite) Reset(db *Db) (error, int64, int) {
+// Reset rolls back all migrations
+func (s *Suite) Reset(db *Db) (int, int, error) {
 	return s.Run(db, false, math.MaxInt32)
 }
 
-func (s *Suite) Run(db *Db, up bool, maxSteps int) (error, int64, int) {
+// Run runs the entire migration suite. If up is false, it will run in reverse.
+// It returns the current migration id, the number of steps applied in this run and an error (if one occurred).
+func (s *Suite) Run(db *Db, up bool, maxSteps int) (int, int, error) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	if l := len(s.Migrations); l == 0 {
-		return errors.New("cannot run suite, no migrations set"), -1, 0
+		return -1, 0, errors.New("cannot run suite, no migrations set")
 	}
 	err := db.Query(s.Stmts.CreateTableSQL).Run()
 	if err != nil {
-		return err, -1, 0
+		return -1, 0, err
 	}
 	var row struct {
-		Version int64
+		Version int
 	}
 	row.Version = -1
 	err = db.Query(s.Stmts.SelectVersionSQL).Rows(&row, 1)
 	if err != nil {
-		return err, -1, 0
+		return -1, 0, err
 	}
 	step := 0
 	stepsApplied := 0
@@ -98,9 +111,9 @@ func (s *Suite) Run(db *Db, up bool, maxSteps int) (error, int64, int) {
 		}
 		txn, err := db.Begin()
 		if err != nil {
-			return err, current, stepsApplied
+			return current, stepsApplied, err
 		}
-		next := m.Id
+		next := m.id
 		if up {
 			err = txn.Query(m.Up).Run()
 		} else {
@@ -108,7 +121,7 @@ func (s *Suite) Run(db *Db, up bool, maxSteps int) (error, int64, int) {
 			err = txn.Query(m.Down).Run()
 		}
 		if err != nil {
-			return err, current, stepsApplied
+			return current, stepsApplied, err
 		}
 		if current == -1 {
 			err = txn.Query(s.Stmts.InsertVersionSQL, next).Run()
@@ -116,27 +129,27 @@ func (s *Suite) Run(db *Db, up bool, maxSteps int) (error, int64, int) {
 			err = txn.Query(s.Stmts.UpdateVersionSQL, next, current).Run()
 		}
 		if err != nil {
-			return err, current, stepsApplied
+			return current, stepsApplied, err
 		}
 		if err := txn.Commit(); err != nil {
-			return err, current, stepsApplied
+			return current, stepsApplied, err
 		}
 		current = next
 		stepsApplied++
 	}
-	return nil, current, stepsApplied
+	return current, stepsApplied, nil
 }
 
-func (s *Suite) buildList(up bool, version int64) []*Migration {
+func (s *Suite) buildList(up bool, version int) []*Migration {
 	a := []*Migration{}
 	for i, m := range s.Migrations {
-		m.Id = int64(i + 1)
+		m.id = i + 1
 		if up {
-			if m.Id > version {
+			if m.id > version {
 				a = append(a, m)
 			}
 		} else {
-			if m.Id <= version {
+			if m.id <= version {
 				a = append(a, m)
 			}
 		}

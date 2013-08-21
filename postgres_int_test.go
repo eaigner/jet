@@ -313,26 +313,26 @@ func TestIntPgSuite(t *testing.T) {
 
 	db := openPg(t)
 
-	if err, c, s := s.Run(db, true, 0); err != nil || c != 4 || s != 4 {
-		t.Fatal(err, c, s)
+	if c, s, err := s.Run(db, true, 0); err != nil || c != 4 || s != 4 {
+		t.Fatal(c, s, err)
 	}
-	if err, c, s := s.Run(db, false, 0); err != nil || c != 0 || s != 4 {
-		t.Fatal(err, c, s)
+	if c, s, err := s.Run(db, false, 0); err != nil || c != 0 || s != 4 {
+		t.Fatal(c, s, err)
 	}
-	if err, c, s := s.Migrate(db); err != nil || c != 4 || s != 4 {
-		t.Fatal(err, c, s)
+	if c, s, err := s.Migrate(db); err != nil || c != 4 || s != 4 {
+		t.Fatal(c, s, err)
 	}
-	if err, c, s := s.Reset(db); err != nil || c != 0 || s != 4 {
-		t.Fatal(err, c, s)
+	if c, s, err := s.Reset(db); err != nil || c != 0 || s != 4 {
+		t.Fatal(c, s, err)
 	}
-	if err, c, s := s.Step(db); err != nil || c != 1 || s != 1 {
-		t.Fatal(err, c, s)
+	if c, s, err := s.Step(db); err != nil || c != 1 || s != 1 {
+		t.Fatal(c, s, err)
 	}
-	if err, c, s := s.Step(db); err != nil || c != 2 || s != 1 {
-		t.Fatal(err, c, s)
+	if c, s, err := s.Step(db); err != nil || c != 2 || s != 1 {
+		t.Fatal(c, s, err)
 	}
-	if err, c, s := s.Rollback(db); err != nil || c != 1 || s != 1 {
-		t.Fatal(err, c, s)
+	if c, s, err := s.Rollback(db); err != nil || c != 1 || s != 1 {
+		t.Fatal(c, s, err)
 	}
 }
 
@@ -342,8 +342,8 @@ func TestIntPgSuiteError(t *testing.T) {
 	s.AddSQL(`CREATE TABLE err ors (id serial)`, `DROP TABLE errors`)
 
 	db := openPg(t)
+	cur, applied, err := s.Migrate(db)
 
-	err, cur, applied := s.Migrate(db)
 	if err == nil {
 		t.Fatal("expected error")
 	} else {
