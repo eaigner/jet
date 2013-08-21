@@ -17,7 +17,7 @@ Features:
 
     db.Query(`INSERT INTO "fruits" ( "name", "price" ) VALUES ( $1, $2 )`, "banana", 2.99).Run()
 
-Run is Jet's `Exec` equivalent and is used instead of `Rows()` when no return values are expected
+`Run` is Jet's `Exec` equivalent and is used instead of `Rows()` when no return values are expected
 
 ### Query Rows
 
