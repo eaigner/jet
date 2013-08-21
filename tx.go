@@ -5,15 +5,15 @@ type tx struct {
 }
 
 func (t *tx) Commit() error {
-	if l := t.Logger(); l != nil {
-		l.Txnf("COMMIT   %s", t.txnId).Println()
-	}
+	// if l := t.Logger(); l != nil {
+	// 	l.Txnf("COMMIT   %s", t.txnId).Println()
+	// }
 	return t.tx.Commit()
 }
 
 func (t *tx) Rollback() error {
-	if l := t.Logger(); l != nil {
-		l.Txnf("ROLLBACK %s", t.txnId).Println()
-	}
+	// if l := t.Logger(); l != nil {
+	// 	l.Txnf("ROLLBACK %s", t.txnId).Println()
+	// }
 	return t.tx.Rollback()
 }

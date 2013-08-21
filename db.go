@@ -41,9 +41,5 @@ func (d *db) Begin() (Tx, error) {
 	t.tx = tx2
 	t.qo = tx2
 	t.txnId = newAlphanumericId(28)
-	if l := d.Logger(); l != nil {
-		t.SetLogger(l)
-		l.Txnf("BEGIN    %s", t.txnId).Println()
-	}
 	return t, nil
 }

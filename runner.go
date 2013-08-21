@@ -2,8 +2,6 @@ package jet
 
 import (
 	"database/sql"
-	"fmt"
-	"strings"
 )
 
 type runner struct {
@@ -17,7 +15,6 @@ type runner struct {
 	query   string
 	lastErr error
 	args    []interface{}
-	logger  *Logger
 	lru     *lruCache
 }
 
@@ -85,9 +82,9 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 		rows *sql.Rows
 		err  error
 	)
-	if r.Logger() != nil {
-		r.logQuery()
-	}
+	// if r.Logger() != nil {
+	// 	r.logQuery()
+	// }
 	if v == nil {
 		_, err = r.stmt.Exec(r.args...)
 		return r.onErr(err)
@@ -136,39 +133,31 @@ func (r *runner) Rows(v interface{}, maxRows ...int64) error {
 	return nil
 }
 
-func (r *runner) Logger() *Logger {
-	return r.logger
-}
+// func (r *runner) logQuery() {
+// 	l := r.Logger()
+// 	if r.txnId != "" {
+// 		l.Txnf("         %s: ", r.txnId[:7])
+// 	}
+// 	l.Queryf(r.query)
+// 	args := []string{}
+// 	for _, a := range r.args {
+// 		var buf []byte
+// 		switch t := a.(type) {
+// 		case []uint8:
+// 			buf = t
+// 			if len(buf) > 5 {
+// 				buf = buf[:5]
+// 			}
+// 		}
+// 		if buf != nil {
+// 			args = append(args, fmt.Sprintf(`<buf:%x...>`, buf))
+// 		} else {
+// 			args = append(args, fmt.Sprintf(`"%v"`, a))
+// 		}
 
-func (r *runner) SetLogger(l *Logger) {
-	r.logger = l
-}
-
-func (r *runner) logQuery() {
-	l := r.Logger()
-	if r.txnId != "" {
-		l.Txnf("         %s: ", r.txnId[:7])
-	}
-	l.Queryf(r.query)
-	args := []string{}
-	for _, a := range r.args {
-		var buf []byte
-		switch t := a.(type) {
-		case []uint8:
-			buf = t
-			if len(buf) > 5 {
-				buf = buf[:5]
-			}
-		}
-		if buf != nil {
-			args = append(args, fmt.Sprintf(`<buf:%x...>`, buf))
-		} else {
-			args = append(args, fmt.Sprintf(`"%v"`, a))
-		}
-
-	}
-	if len(r.args) > 0 {
-		l.Argsf(" [%s]", strings.Join(args, ", "))
-	}
-	l.Println()
-}
+// 	}
+// 	if len(r.args) > 0 {
+// 		l.Argsf(" [%s]", strings.Join(args, ", "))
+// 	}
+// 	l.Println()
+// }

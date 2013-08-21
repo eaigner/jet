@@ -5,7 +5,6 @@ package jet
 
 import (
 	_ "github.com/lib/pq"
-	"os"
 	"testing"
 	"time"
 )
@@ -15,7 +14,6 @@ func openPg(t *testing.T) Db {
 	if err != nil {
 		t.Fatal(err)
 	}
-	db.SetLogger(NewLogger(nil))
 
 	err = db.Query("DROP SCHEMA public CASCADE").Run()
 	if err != nil {
@@ -31,12 +29,7 @@ func openPg(t *testing.T) Db {
 
 func TestIntPgRowUnpack(t *testing.T) {
 	db := openPg(t)
-	l := NewLogger(os.Stdout)
-	db.SetLogger(l)
 	db.SetColumnConverter(SnakeCaseConverter)
-	if db.Logger() != l {
-		t.Fatal("wrong logger set")
-	}
 	err := db.Query(`DROP TABLE IF EXISTS jetTest`).Run()
 	if err != nil {
 		t.Fatal(err)
@@ -125,11 +118,6 @@ func TestIntPgRowUnpack(t *testing.T) {
 
 func TestIntPgTransaction(t *testing.T) {
 	db := openPg(t)
-	l := NewLogger(os.Stdout)
-	db.SetLogger(l)
-	if db.Logger() != l {
-		t.Fatal("wrong logger set")
-	}
 	err := db.Query(`DROP TABLE IF EXISTS "tx_table"`).Run()
 	if err != nil {
 		t.Fatal(err)
@@ -141,9 +129,6 @@ func TestIntPgTransaction(t *testing.T) {
 	tx, err := db.Begin()
 	if err != nil {
 		t.Fatal(err)
-	}
-	if tx.Logger() != db.Logger() {
-		t.Fatal("wrong logger set")
 	}
 	err1 := tx.Query(`INSERT INTO "tx_table" ( "a", "b" ) VALUES ( $1, $2 )`, "hello", 7).Run()
 	if err1 != nil {
@@ -187,7 +172,6 @@ func TestIntPgTransaction(t *testing.T) {
 
 func TestIntPgNullValue(t *testing.T) {
 	db := openPg(t)
-	db.SetLogger(NewLogger(os.Stdout))
 	db.SetColumnConverter(SnakeCaseConverter)
 
 	err := db.Query(`DROP TABLE IF EXISTS jetNullTest`).Run()
@@ -222,7 +206,6 @@ func TestIntPgHstoreQuery(t *testing.T) {
 	db := openPg(t)
 	db.ExpandMapAndSliceMarker(true)
 	db.SetColumnConverter(SnakeCaseConverter)
-	db.SetLogger(NewLogger(nil))
 	err := db.Query(`CREATE EXTENSION IF NOT EXISTS hstore`).Run()
 	if err != nil {
 		t.Fatal(err)
@@ -275,7 +258,6 @@ func TestIntPgErrors(t *testing.T) {
 	db := openPg(t)
 	db.ExpandMapAndSliceMarker(true)
 	db.SetColumnConverter(SnakeCaseConverter)
-	db.SetLogger(NewLogger(nil))
 	err := db.Query(`DROP TABLE IF EXISTS "logtest"`).Run()
 	if err != nil {
 		t.Fatal(err)

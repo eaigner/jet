@@ -43,10 +43,6 @@ type Queryable interface {
 	Run() error
 	// Rows runs the query writing the rows to the specified map or struct array. If maxRows is specified, only writes up to maxRows rows.
 	Rows(v interface{}, maxRows ...int64) error
-	// Logger returns the current logger
-	Logger() *Logger
-	// SetLogger sets a logger
-	SetLogger(l *Logger)
 }
 
 type queryObject interface {
