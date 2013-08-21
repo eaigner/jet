@@ -11,7 +11,7 @@ func TestLRU(t *testing.T) {
 	s3 := new(sql.Stmt)
 	s4 := new(sql.Stmt)
 
-	lru := newLRUCache(3)
+	lru := NewLRUCache(3)
 	lru.set("one", s1)
 	lru.set("two", s2)
 	lru.set("two", s2)

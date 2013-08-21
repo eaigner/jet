@@ -8,6 +8,7 @@ type Db struct {
 	*sql.DB
 
 	ColumnConverter ColumnConverter
+	LRUCache        *LRUCache
 
 	driver string
 	source string

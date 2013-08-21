@@ -7,7 +7,8 @@ import (
 	"time"
 )
 
-type lruCache struct {
+// The LRUCache can speed up queries by caching prepared statements.
+type LRUCache struct {
 	m   map[string]*lruItem
 	max int
 	mtx sync.Mutex
@@ -33,13 +34,15 @@ func (l lruList) Swap(i, j int) {
 	l[i], l[j] = l[j], l[i]
 }
 
-func newLRUCache(max int) *lruCache {
-	c := &lruCache{max: max}
+// NewLRUCache creates a new LRU cache with the specified size.
+// You can set this cache on a *Db instance.
+func NewLRUCache(max int) *LRUCache {
+	c := &LRUCache{max: max}
 	c.reset()
 	return c
 }
 
-func (c *lruCache) set(key string, stmt *sql.Stmt) {
+func (c *LRUCache) set(key string, stmt *sql.Stmt) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
@@ -51,7 +54,7 @@ func (c *lruCache) set(key string, stmt *sql.Stmt) {
 	c.cleanIfNeeded()
 }
 
-func (c *lruCache) get(key string) *sql.Stmt {
+func (c *LRUCache) get(key string) *sql.Stmt {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
@@ -61,7 +64,7 @@ func (c *lruCache) get(key string) *sql.Stmt {
 	return nil
 }
 
-func (c *lruCache) cleanIfNeeded() {
+func (c *LRUCache) cleanIfNeeded() {
 	if c.max == 0 {
 		c.max = 20
 	}
@@ -70,7 +73,7 @@ func (c *lruCache) cleanIfNeeded() {
 	}
 }
 
-func (c *lruCache) clean() {
+func (c *LRUCache) clean() {
 	a := make(lruList, 0, len(c.m))
 	for _, v := range c.m {
 		a = append(a, v)
@@ -81,7 +84,7 @@ func (c *lruCache) clean() {
 	}
 }
 
-func (c *lruCache) reset() {
+func (c *LRUCache) reset() {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 

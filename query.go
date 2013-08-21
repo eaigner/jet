@@ -10,7 +10,6 @@ type query struct {
 	id      string
 	query   string
 	args    []interface{}
-	lru     *lruCache
 	lastErr error
 	stmt    *sql.Stmt
 }
@@ -104,9 +103,9 @@ func (q *query) prepare(query string, args ...interface{}) Runnable {
 
 	var stmt *sql.Stmt
 	var lkey string
-	if q.lru != nil {
+	if q.db.LRUCache != nil {
 		lkey = q.id + q.query
-		stmt = q.lru.get(lkey)
+		stmt = q.db.LRUCache.get(lkey)
 	}
 	if stmt == nil {
 		var err error
@@ -115,8 +114,8 @@ func (q *query) prepare(query string, args ...interface{}) Runnable {
 			q.onErr(err)
 			return q
 		}
-		if q.lru != nil {
-			q.lru.set(lkey, stmt)
+		if q.db.LRUCache != nil {
+			q.db.LRUCache.set(lkey, stmt)
 		}
 	}
 	q.stmt = stmt
@@ -127,8 +126,8 @@ func (q *query) prepare(query string, args ...interface{}) Runnable {
 func (q *query) onErr(err error) error {
 	if err != nil {
 		q.lastErr = err
-		if q.lru != nil {
-			q.lru.reset()
+		if q.db.LRUCache != nil {
+			q.db.LRUCache.reset()
 		}
 	}
 	return err
