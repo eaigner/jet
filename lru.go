@@ -80,6 +80,11 @@ func (c *LRUCache) clean() {
 	}
 	sort.Sort(sort.Reverse(a))
 	for _, v := range a[c.max:] {
+		// TODO(erik): investigate why this triggers a nil pointer exception in ddatabase/sql/sql.go:384
+		//
+		// if v.stmt != nil {
+		// 	v.stmt.Close()
+		// }
 		delete(c.m, v.key)
 	}
 }

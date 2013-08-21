@@ -28,8 +28,14 @@ func (q *query) Run() error {
 }
 
 func (q *query) Rows(v interface{}, maxRows ...int64) error {
-	// Always clear the error after we are done with Rows.
-	defer func() { q.lastErr = nil }()
+	// Always clear the error and close the statement - if it's not handled
+	// by the LRU - after we are done with Rows.
+	defer func() {
+		q.lastErr = nil
+		if q.db.LRUCache == nil {
+			q.stmt.Close()
+		}
+	}()
 
 	// Since Query doesn't return the error directly we do it here
 	if q.lastErr != nil {
