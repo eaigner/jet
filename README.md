@@ -43,6 +43,9 @@ Jet can also deserialize hstore columns for you. In this case the `header` colum
 
 If you want to do e.g. hstore inserts or set membership queries, Jet can automatically expand the query and adjust the argument list for you.
 
+ * Maps expand to `k1`, `v1`, `k2`, `v2`, ...
+ * Slices expand to `v1`, `v2`, ...
+
 Passing in a **map** argument
 
     db.Query(`INSERT INTO "emails" ( "header", "body" ) VALUES ( hstore(ARRAY[ $1 ]), $2 )`, aMap, aBody).Run()
