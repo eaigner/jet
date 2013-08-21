@@ -7,8 +7,12 @@ import (
 type Db struct {
 	*sql.DB
 
+	// The column converter to use.
+	// Defaults to SnakeCaseConverter.
 	ColumnConverter ColumnConverter
-	LRUCache        *LRUCache
+
+	// LRU cache to use (if set).
+	LRUCache *LRUCache
 
 	driver string
 	source string
