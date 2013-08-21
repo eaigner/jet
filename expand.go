@@ -67,9 +67,7 @@ func serializeMap(markPlaceholder string, v reflect.Value, newArgs *[]interface{
 		val := v.MapIndex(keyVal)
 		a = append(a, keyVal.Interface(), val.Interface())
 	}
-	*newParts = append(*newParts, "hstore(ARRAY[ ")
 	serializeSlice(markPlaceholder, reflect.ValueOf(a), newArgs, newParts)
-	*newParts = append(*newParts, " ])")
 }
 
 func sanitizeMarkEnumeration(usesNumberedMarkers bool, markFormat, query string) string {

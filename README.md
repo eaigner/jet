@@ -45,7 +45,7 @@ If you want to do e.g. hstore inserts or set membership queries, Jet can automat
 
 Passing in a **map** argument
 
-    db.Query(`INSERT INTO "emails" ( "header", "body" ) VALUES ( $1, $2 )`, aMap, aBody).Run()
+    db.Query(`INSERT INTO "emails" ( "header", "body" ) VALUES ( hstore(ARRAY[ $1 ]), $2 )`, aMap, aBody).Run()
 
 will expanded the query to
 

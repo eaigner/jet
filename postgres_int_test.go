@@ -220,7 +220,7 @@ func TestIntPgHstoreQuery(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = db.Query(
-		`INSERT INTO "hstoretable" VALUES ( $1, $2, $3 )`,
+		`INSERT INTO "hstoretable" VALUES ( $1, hstore(ARRAY[ $2 ]), $3 )`,
 		"aval",
 		map[string]interface{}{"key1": "val1", "key2": 2},
 		"cval",

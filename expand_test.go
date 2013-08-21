@@ -5,7 +5,7 @@ import (
 )
 
 func TestQueryMarkSubstitution(t *testing.T) {
-	query := `INSERT INTO "fruits" ( "name", "attrs", "origin" ) VALUES ( $1, $2, $3 )`
+	query := `INSERT INTO "fruits" ( "name", "attrs", "origin" ) VALUES ( $1, hstore(ARRAY[ $2 ]), $3 )`
 	args := []interface{}{"banana", map[string]interface{}{
 		"color": "yellow",
 		"price": 2,
