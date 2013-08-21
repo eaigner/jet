@@ -6,21 +6,11 @@ import (
 
 type Db struct {
 	*sql.DB
+
 	ColumnConverter ColumnConverter
 
 	driver string
 	source string
-
-	//--
-	tx      *sql.Tx
-	stmt    *sql.Stmt
-	qo      queryObject
-	conv    ColumnConverter
-	txnId   string
-	query   string
-	lastErr error
-	args    []interface{}
-	lru     *lruCache
 }
 
 // Open opens a new database connection.
@@ -55,32 +45,3 @@ func (db *Db) Begin() (*Tx, error) {
 func (db *Db) Query(query string, args ...interface{}) Runnable {
 	return newQuery(db, db).prepare(query, args...)
 }
-
-// func (db *Db) logQuery() {
-// 	l := r.Logger()
-// 	if r.txnId != "" {
-// 		l.Txnf("         %s: ", r.txnId[:7])
-// 	}
-// 	l.Queryf(r.query)
-// 	args := []string{}
-// 	for _, a := range r.args {
-// 		var buf []byte
-// 		switch t := a.(type) {
-// 		case []uint8:
-// 			buf = t
-// 			if len(buf) > 5 {
-// 				buf = buf[:5]
-// 			}
-// 		}
-// 		if buf != nil {
-// 			args = append(args, fmt.Sprintf(`<buf:%x...>`, buf))
-// 		} else {
-// 			args = append(args, fmt.Sprintf(`"%v"`, a))
-// 		}
-
-// 	}
-// 	if len(r.args) > 0 {
-// 		l.Argsf(" [%s]", strings.Join(args, ", "))
-// 	}
-// 	l.Println()
-// }

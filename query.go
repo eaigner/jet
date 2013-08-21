@@ -15,6 +15,7 @@ type query struct {
 	stmt    *sql.Stmt
 }
 
+// newQuery initiates a new query for the provided query object (either *sql.Tx or *sql.DB)
 func newQuery(qo queryObject, db *Db) *query {
 	return &query{
 		qo: qo,
@@ -65,7 +66,7 @@ func (q *query) Rows(v interface{}, maxRows ...int64) error {
 	}
 	var i int64 = 0
 	mppr := &mapper{
-		conv: q.db.conv,
+		conv: q.db.ColumnConverter,
 	}
 	for {
 		// Check if max rows has been reached
