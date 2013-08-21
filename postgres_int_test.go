@@ -16,6 +16,9 @@ func openPg(t *testing.T) *Db {
 	}
 
 	db.LRUCache = NewLRUCache(40)
+	db.LogFunc = func(queryId, query string, args ...interface{}) {
+		t.Logf("%s: %s ARG: %v", queryId, query, args)
+	}
 
 	err = db.Query("DROP SCHEMA public CASCADE").Run()
 	if err != nil {

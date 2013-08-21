@@ -19,7 +19,7 @@ func newQuery(qo queryObject, db *Db) *query {
 	return &query{
 		qo: qo,
 		db: db,
-		id: newAlphanumericId(7),
+		id: newQueryId(),
 	}
 }
 
@@ -51,9 +51,9 @@ func (q *query) Rows(v interface{}, maxRows ...int64) error {
 		rows *sql.Rows
 		err  error
 	)
-	// if q.Logger() != nil {
-	// 	r.logQuery()
-	// }
+	if q.db.LogFunc != nil {
+		q.db.LogFunc(q.id, q.query, q.args...)
+	}
 	if v == nil {
 		_, err = q.stmt.Exec(q.args...)
 		return q.onErr(err)

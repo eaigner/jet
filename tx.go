@@ -7,27 +7,30 @@ import (
 // Tx represents a transaction instance.
 // It can be created using Begin on the *Db object.
 type Tx struct {
-	db *Db
-	tx *sql.Tx
+	db  *Db
+	tx  *sql.Tx
+	qid string
 }
 
 // Query creates a prepared query that can be run with Rows or Run.
-func (t *Tx) Query(query string, args ...interface{}) Runnable {
-	return newQuery(t.tx, t.db).prepare(query, args...)
+func (tx *Tx) Query(query string, args ...interface{}) Runnable {
+	q := newQuery(tx.tx, tx.db)
+	q.id = tx.qid
+	return q.prepare(query, args...)
 }
 
 // Commit commits the transaction
-func (t *Tx) Commit() error {
-	// if l := t.Logger(); l != nil {
-	// 	l.Txnf("COMMIT   %s", t.txnId).Println()
-	// }
-	return t.tx.Commit()
+func (tx *Tx) Commit() error {
+	if tx.db.LogFunc != nil {
+		tx.db.LogFunc(tx.qid, "COMMIT")
+	}
+	return tx.tx.Commit()
 }
 
 // Rollback rolls back the transaction
-func (t *Tx) Rollback() error {
-	// if l := t.Logger(); l != nil {
-	// 	l.Txnf("ROLLBACK %s", t.txnId).Println()
-	// }
-	return t.tx.Rollback()
+func (tx *Tx) Rollback() error {
+	if tx.db.LogFunc != nil {
+		tx.db.LogFunc(tx.qid, "ROLLBACK")
+	}
+	return tx.tx.Rollback()
 }
