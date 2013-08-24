@@ -27,6 +27,29 @@ func (q *query) Run() error {
 	return q.Rows(nil)
 }
 
+func (q *query) Exec() (sql.Result, error) {
+	// Always clear the error and close the statement - if it's not handled
+	// by the LRU - after we are done with Rows.
+	defer func() {
+		q.lastErr = nil
+		if q.db.LRUCache == nil {
+			q.stmt.Close()
+		}
+	}()
+
+	// Since Query doesn't return the error directly we do it here
+	if q.lastErr != nil {
+		return nil, q.lastErr
+	}
+
+	if q.db.LogFunc != nil {
+		q.db.LogFunc(q.id, q.query, q.args...)
+	}
+
+	res, err := q.stmt.Exec(q.args...)
+	return res, q.onErr(err)
+}
+
 func (q *query) Rows(v interface{}, maxRows ...int64) error {
 	// Always clear the error and close the statement - if it's not handled
 	// by the LRU - after we are done with Rows.
