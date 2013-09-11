@@ -30,8 +30,23 @@ func TestUnpackSimple(t *testing.T) {
 	}
 }
 
+type custom struct {
+	a string
+	b string
+}
+
+func (c *custom) Encode() interface{} {
+	return c.a + c.b
+}
+
+func (c *custom) Decode(v interface{}) {
+	s := v.(string)
+	c.a = string(s[0])
+	c.b = string(s[1])
+}
+
 func TestUnpackStruct(t *testing.T) {
-	keys := []string{"ab_c", "c_d", "e", "f", "g", "h", "i"}
+	keys := []string{"ab_c", "c_d", "e", "f", "g", "h", "i", "j"}
 	vals := []interface{}{
 		int64(9),
 		"hello",
@@ -40,6 +55,7 @@ func TestUnpackStruct(t *testing.T) {
 		[]uint8("uint8data"),
 		[]uint8("1"),
 		int64(1),
+		"xy",
 	}
 	mppr := &mapper{
 		conv: SnakeCaseConverter,
@@ -53,6 +69,7 @@ func TestUnpackStruct(t *testing.T) {
 		G   []byte
 		H   bool
 		I   bool
+		J   *custom
 	}
 	err := mppr.unpack(keys, vals, v)
 	if err == nil {
@@ -82,6 +99,15 @@ func TestUnpackStruct(t *testing.T) {
 	}
 	if x := v.I; x != true {
 		t.Fatal(x)
+	}
+	if v.J == nil {
+		t.Fatal()
+	}
+	if v.J.a != "x" {
+		t.Fatal(v.J)
+	}
+	if v.J.b != "y" {
+		t.Fatal(v.J)
 	}
 }
 

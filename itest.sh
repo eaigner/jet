@@ -1,2 +1,2 @@
 #!/bin/bash
-go test -race -run "^(Test|Benchmark)IntPg[A-Z](.*)"
+go test -race -run "^(Test|Benchmark)_(.*)"

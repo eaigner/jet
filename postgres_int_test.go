@@ -32,7 +32,47 @@ func openPg(t *testing.T) *Db {
 	return db
 }
 
-func TestIntPgRowUnpack(t *testing.T) {
+type cx struct {
+	a string
+	b string
+}
+
+func (c *cx) Encode() interface{} {
+	return c.a + c.b
+}
+
+func (c *cx) Decode(v interface{}) {
+	var s string
+	switch t := v.(type) {
+	case []uint8:
+		s = string(t)
+	case string:
+		s = t
+	}
+	c.a = string(s[0])
+	c.b = string(s[1])
+}
+
+func Test_ComplexValues(t *testing.T) {
+	db := openPg(t)
+
+	err := db.Query(`CREATE TABLE complexTest ( a text )`).Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var c cx
+	err = db.Query(`INSERT INTO complexTest ( a ) VALUES ( $1 ) RETURNING a`, &cx{"x", "y"}).Rows(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if c.a != "x" || c.b != "y" {
+		t.Fatal(c)
+	}
+}
+
+func Test_PgRowUnpack(t *testing.T) {
 	db := openPg(t)
 	err := db.Query(`DROP TABLE IF EXISTS jetTest`).Run()
 	if err != nil {
@@ -120,7 +160,7 @@ func TestIntPgRowUnpack(t *testing.T) {
 	}
 }
 
-func TestIntPgTransaction(t *testing.T) {
+func Test_PgTransaction(t *testing.T) {
 	db := openPg(t)
 	err := db.Query(`DROP TABLE IF EXISTS "tx_table"`).Run()
 	if err != nil {
@@ -174,7 +214,7 @@ func TestIntPgTransaction(t *testing.T) {
 	}
 }
 
-func TestIntPgNullValue(t *testing.T) {
+func Test_PgNullValue(t *testing.T) {
 	db := openPg(t)
 
 	err := db.Query(`DROP TABLE IF EXISTS jetNullTest`).Run()
@@ -205,7 +245,7 @@ func TestIntPgNullValue(t *testing.T) {
 	}
 }
 
-func TestIntPgHstoreQuery(t *testing.T) {
+func Test_PgHstoreQuery(t *testing.T) {
 	db := openPg(t)
 	err := db.Query(`CREATE EXTENSION IF NOT EXISTS hstore`).Run()
 	if err != nil {
@@ -255,7 +295,7 @@ func TestIntPgHstoreQuery(t *testing.T) {
 	}
 }
 
-func TestIntPgErrors(t *testing.T) {
+func Test_PgErrors(t *testing.T) {
 	db := openPg(t)
 	err := db.Query(`DROP TABLE IF EXISTS "logtest"`).Run()
 	if err != nil {
@@ -295,7 +335,7 @@ func TestIntPgErrors(t *testing.T) {
 	}
 }
 
-func TestIntPgSuite(t *testing.T) {
+func Test_PgSuite(t *testing.T) {
 	var s Suite
 	s.AddSQL(
 		`CREATE TABLE "suite_test" ( id serial, name text )`,
@@ -339,7 +379,7 @@ func TestIntPgSuite(t *testing.T) {
 	}
 }
 
-func TestIntPgSuiteError(t *testing.T) {
+func Test_PgSuiteError(t *testing.T) {
 	var s Suite
 	s.AddSQL(`CREATE TABLE flowers (id serial)`, `DROP TABLE flowers`)
 	s.AddSQL(`CREATE TABLE err ors (id serial)`, `DROP TABLE errors`)
@@ -360,7 +400,7 @@ func TestIntPgSuiteError(t *testing.T) {
 	}
 }
 
-func BenchmarkIntPgQuery(b *testing.B) {
+func Benchmark_PgQuery(b *testing.B) {
 	db := openPg(nil)
 	err := db.Query(`DROP TABLE IF EXISTS "benchmark"`).Run()
 	if err != nil {

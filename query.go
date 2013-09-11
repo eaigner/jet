@@ -55,11 +55,11 @@ func (q *query) Rows(v interface{}, maxRows ...int64) error {
 		q.db.LogFunc(q.id, q.query, q.args...)
 	}
 	if v == nil {
-		_, err = q.stmt.Exec(q.args...)
+		_, err = q.stmt.Exec(q.encodedArgs()...)
 		return q.onErr(err)
 
 	} else {
-		rows, err = q.stmt.Query(q.args...)
+		rows, err = q.stmt.Query(q.encodedArgs()...)
 		if err != nil {
 			return q.onErr(err)
 		}
@@ -100,6 +100,19 @@ func (q *query) Rows(v interface{}, maxRows ...int64) error {
 		i++
 	}
 	return nil
+}
+
+func (q *query) encodedArgs() []interface{} {
+	enc := make([]interface{}, 0, len(q.args))
+	for _, a := range q.args {
+		v, ok := a.(ComplexValue)
+		if ok {
+			enc = append(enc, v.Encode())
+		} else {
+			enc = append(enc, a)
+		}
+	}
+	return enc
 }
 
 func (q *query) prepare(query string, args ...interface{}) Runnable {

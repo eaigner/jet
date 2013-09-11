@@ -15,3 +15,9 @@ type Runnable interface {
 type queryObject interface {
 	Prepare(query string) (*sql.Stmt, error)
 }
+
+// ComplexValue implements methods for en/decoding custom values to a format the driver understands.
+type ComplexValue interface {
+	Encode() interface{}
+	Decode(v interface{})
+}
