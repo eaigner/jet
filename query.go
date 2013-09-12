@@ -32,7 +32,7 @@ func (q *query) Rows(v interface{}, maxRows ...int64) error {
 	// by the LRU - after we are done with Rows.
 	defer func() {
 		q.lastErr = nil
-		if q.db.LRUCache == nil {
+		if q.db.LRUCache == nil && q.stmt != nil {
 			q.stmt.Close()
 		}
 	}()
