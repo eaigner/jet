@@ -30,6 +30,34 @@ func TestUnpackSimple(t *testing.T) {
 	}
 }
 
+func TestUnpackNested(t *testing.T) {
+	type A struct {
+		B string
+	}
+	type C struct {
+		A
+		E int
+	}
+
+	keys := []string{"b", "e"}
+	values := []interface{}{"b!", int(9)}
+	mp := &mapper{
+		conv: SnakeCaseConverter,
+	}
+
+	var out C
+	err := mp.unpack(keys, values, &out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.B != "b!" {
+		t.Fatal(out)
+	}
+	if out.E != 9 {
+		t.Fatal(out)
+	}
+}
+
 type custom struct {
 	a string
 	b string
