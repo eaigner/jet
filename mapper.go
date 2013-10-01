@@ -125,6 +125,8 @@ func setValue(from, to reflect.Value) {
 		setValueFromInt(reflect.ValueOf(t).Int(), to)
 	case uint, uint8, uint16, uint32, uint64:
 		setValueFromUint(reflect.ValueOf(t).Uint(), to)
+	case float32, float64:
+		setValueFromFloat(reflect.ValueOf(t).Float(), to)
 	case time.Time:
 		setValueFromTime(t, to)
 	default:
@@ -143,12 +145,27 @@ func setValueFromBytes(t []uint8, to reflect.Value) {
 	case uint, uint8, uint16, uint32, uint64:
 		n, _ := strconv.ParseUint(string(t), 10, 64)
 		convertAndSet(n, to)
+	case float32:
+		n, _ := strconv.ParseFloat(string(t), 32)
+		convertAndSet(n, to)
+	case float64:
+		n, _ := strconv.ParseFloat(string(t), 64)
+		convertAndSet(n, to)
 	case string:
 		to.SetString(string(t))
 	case map[string]interface{}:
 		to.Set(reflect.ValueOf(parseHstoreColumn(string(t))))
 	default:
 		convertAndSet(t, to)
+	}
+}
+
+func setValueFromFloat(f float64, to reflect.Value) {
+	switch to.Interface().(type) {
+	case bool:
+		convertAndSet(bool(f == 1), to)
+	default:
+		convertAndSet(f, to)
 	}
 }
 
