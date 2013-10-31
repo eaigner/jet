@@ -26,7 +26,8 @@ func (m *mapper) unpackValue(keys []string, values []interface{}, out reflect.Va
 		if out.IsNil() {
 			out.Set(reflect.New(out.Type().Elem()))
 		}
-		return out.Interface().(ComplexValue).Decode(values[0])
+		plain := reflect.Indirect(reflect.ValueOf(values[0]))
+		return out.Interface().(ComplexValue).Decode(plain.Interface())
 	}
 	if out.CanAddr() {
 		switch out.Addr().Interface().(type) {

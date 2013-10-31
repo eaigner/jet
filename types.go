@@ -19,5 +19,7 @@ type queryObject interface {
 // ComplexValue implements methods for en/decoding custom values to a format the driver understands.
 type ComplexValue interface {
 	Encode() interface{}
+
+	// Decode receives a plain value to decode, never a pointer.
 	Decode(v interface{}) error
 }
