@@ -21,17 +21,25 @@ func (m *mapper) unpack(keys []string, values []interface{}, out interface{}) er
 }
 
 func (m *mapper) unpackValue(keys []string, values []interface{}, out reflect.Value) error {
+	switch out.Interface().(type) {
+	case ComplexValue:
+		if out.IsNil() {
+			out.Set(reflect.New(out.Type().Elem()))
+		}
+		return out.Interface().(ComplexValue).Decode(values[0])
+	}
+	if out.CanAddr() {
+		switch out.Addr().Interface().(type) {
+		case ComplexValue:
+			return m.unpackValue(keys, values, out.Addr())
+		}
+	}
 	switch out.Kind() {
 	case reflect.Ptr:
 		if out.IsNil() {
 			out.Set(reflect.New(out.Type().Elem()))
 		}
-		// If the pointer implements ComplexValue, there is no need for indirection
-		if _, ok := out.Interface().(ComplexValue); ok {
-			return m.unpackSimple(keys, values, out)
-		} else {
-			return m.unpackValue(keys, values, reflect.Indirect(out))
-		}
+		return m.unpackValue(keys, values, reflect.Indirect(out))
 	case reflect.Slice:
 		if keys == nil {
 			return m.unpackSimple(nil, values, out)
@@ -114,10 +122,6 @@ func convertAndSet(f interface{}, to reflect.Value) {
 }
 
 func setValue(from, to reflect.Value) {
-	if cto, ok := to.Interface().(ComplexValue); ok {
-		cto.Decode(from.Interface())
-		return
-	}
 	switch t := from.Interface().(type) {
 	case []uint8:
 		setValueFromBytes(t, to)
