@@ -79,8 +79,22 @@ func (c *custom) Decode(v interface{}) error {
 	return nil
 }
 
+type plainCustom string
+
+func (c *plainCustom) Encode() interface{} {
+	return *c + "!"
+}
+
+func (c *plainCustom) Decode(v interface{}) error {
+	s, ok := v.(string)
+	if ok {
+		*c = plainCustom(s)
+	}
+	return nil
+}
+
 func TestUnpackStruct(t *testing.T) {
-	keys := []string{"ab_c", "c_d", "e", "f", "g", "h", "i", "j", "k", "l"}
+	keys := []string{"ab_c", "c_d", "e", "f", "g", "h", "i", "j", "k", "l", "m"}
 	sptr := "cd"
 	vals := []interface{}{
 		int64(9),
@@ -93,6 +107,7 @@ func TestUnpackStruct(t *testing.T) {
 		"xy",
 		"ab",
 		&sptr,
+		"s",
 	}
 	mppr := &mapper{
 		conv: SnakeCaseConverter,
@@ -109,6 +124,7 @@ func TestUnpackStruct(t *testing.T) {
 		J   *custom
 		K   custom
 		L   custom
+		M   plainCustom
 	}
 	err := mppr.unpack(keys, vals, v)
 	if err == nil {
@@ -159,6 +175,9 @@ func TestUnpackStruct(t *testing.T) {
 	}
 	if v.L.b != "d" {
 		t.Fatal(v.L)
+	}
+	if v.M != "s" {
+		t.Fatal(v.M)
 	}
 }
 
