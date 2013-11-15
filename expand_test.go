@@ -37,12 +37,23 @@ func TestQueryMarkSubstitution(t *testing.T) {
 }
 
 func TestHstoreColumnParse(t *testing.T) {
-	h := parseHstoreColumn(`"a\"b\"c"=>"d\"e\"f", "g\"h\"i"=>"j\"k\"l"`)
-	if x := len(h); x != 2 {
+	h := parseHstoreColumn(`"a\"b\"c"=>"d\"e\"f", "g\"h\"i"=>"j\"k\"l", "m"=>NULL, "n"=>"NULL"`)
+	if x := len(h); x != 4 {
 		t.Fatal(h)
 	}
 	t.Log(h)
+
 	if x := h[`a"b"c`]; x != `d"e"f` {
 		t.Fatal(x)
+	}
+
+	var exp interface{} = nil
+	if x := h["m"]; x != exp {
+		t.Fatalf("Error: %v != %v", x, exp)
+	}
+
+	exp = "NULL"
+	if x := h["n"]; x != exp {
+		t.Fatalf("Error: %v != %v", x, exp)
 	}
 }
