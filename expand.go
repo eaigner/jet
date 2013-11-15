@@ -96,7 +96,7 @@ func parseHstoreColumn(s string) map[string]interface{} {
 		case '\\':
 			escaped = true
 		case 'N':
-			if !quoteOpen && s[i:i+4] == "NULL" {
+			if !quoteOpen && strings.HasPrefix(s[i:], "NULL") {
 				a = append(a, "NULL")
 			}
 		case '"':

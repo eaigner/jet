@@ -53,7 +53,7 @@ func TestHstoreColumnParse(t *testing.T) {
 	}
 
 	exp = "NULL"
-	if x := h["n"]; x != exp {
+	if x, ok := h["n"]; x != exp || ok != true {
 		t.Fatalf("Error: %v != %v", x, exp)
 	}
 }
