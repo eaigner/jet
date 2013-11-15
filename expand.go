@@ -95,6 +95,10 @@ func parseHstoreColumn(s string) map[string]interface{} {
 		switch r {
 		case '\\':
 			escaped = true
+		case 'N':
+			if !quoteOpen && strings.HasPrefix(s[i:], "NULL") {
+				a = append(a, "NULL")
+			}
 		case '"':
 			if !escaped {
 				quoteOpen = !quoteOpen
@@ -117,10 +121,20 @@ func parseHstoreColumn(s string) map[string]interface{} {
 	// Convert to map
 	m := make(map[string]interface{}, len(a)/2)
 	lastKey := ""
+	uq := ""
+	isNull := false
 	for i, v := range a {
-		uq, _ := strconv.Unquote(v)
+		if v == "NULL" {
+			isNull = true
+		} else {
+			uq, _ = strconv.Unquote(v)
+			isNull = false
+		}
+
 		if i%2 == 0 {
 			lastKey = uq
+		} else if isNull {
+			m[lastKey] = nil
 		} else {
 			m[lastKey] = uq
 		}
