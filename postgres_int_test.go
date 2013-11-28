@@ -41,7 +41,7 @@ func (c *cx) Encode() interface{} {
 	return c.a + c.b
 }
 
-func (c *cx) Decode(v interface{}) {
+func (c *cx) Decode(v interface{}) error {
 	var s string
 	switch t := v.(type) {
 	case []uint8:
@@ -51,6 +51,8 @@ func (c *cx) Decode(v interface{}) {
 	}
 	c.a = string(s[0])
 	c.b = string(s[1])
+
+	return nil
 }
 
 func Test_ComplexValues(t *testing.T) {
