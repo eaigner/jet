@@ -94,7 +94,7 @@ func (s *Suite) Run(db *Db, up bool, maxSteps int) (int, int, error) {
 		Version int
 	}
 	row.Version = -1
-	err = db.Query(s.Stmts.SelectVersionSQL).Rows(&row, 1)
+	err = db.Query(s.Stmts.SelectVersionSQL).Rows(&row)
 	if err != nil {
 		return -1, 0, err
 	}

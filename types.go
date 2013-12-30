@@ -8,8 +8,7 @@ type Runnable interface {
 	// Run runs the query without returning results
 	Run() error
 	// Rows runs the query writing the rows to the specified map or struct array.
-	// If maxRows is specified, only writes up to maxRows rows.
-	Rows(v interface{}, maxRows ...int64) error
+	Rows(v interface{}) error
 }
 
 type queryObject interface {

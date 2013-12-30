@@ -15,7 +15,6 @@ func openPg(t *testing.T) *Db {
 		t.Fatal(err)
 	}
 
-	db.LRUCache = NewLRUCache(40)
 	db.LogFunc = func(queryId, query string, args ...interface{}) {
 		t.Logf("%s: %s ARG: %v", queryId, query, args)
 	}
@@ -30,6 +29,13 @@ func openPg(t *testing.T) *Db {
 	}
 
 	return db
+}
+
+func runSql(t *testing.T, db *Db, sql string) {
+	err := db.Query(sql).Run()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 type cx struct {
@@ -139,11 +145,11 @@ func Test_PgRowUnpack(t *testing.T) {
 		A string
 		B int64
 	}
-	err = db.Query(`SELECT * FROM jetTest`).Rows(&sv3, 1)
+	err = db.Query(`SELECT * FROM jetTest`).Rows(&sv3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if x := len(sv3); x != 1 {
+	if x := len(sv3); x != 2 {
 		t.Fatal(x)
 	}
 	if x := sv3[0]; x.A != "hello" || x.B != 7 {
@@ -334,6 +340,32 @@ func Test_PgErrors(t *testing.T) {
 	}
 	if len(results) != 0 {
 		t.Fatal("no results should be found.")
+	}
+}
+
+func Test_PgUniqueIndex(t *testing.T) {
+	db := openPg(t)
+
+	t.Log("TODO: this test fails due to issue https://github.com/lib/pq/issues/215")
+
+	runSql(t, db, `DROP TABLE IF EXISTS "unique"`)
+	runSql(t, db, `CREATE TABLE "unique" ( "a" text )`)
+	runSql(t, db, `CREATE UNIQUE INDEX "ix" ON "unique" ( "a" );`)
+
+	var a string
+	err := db.Query(`INSERT INTO "unique" VALUES ( '1' ) RETURNING a;`).Rows(&a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a != "1" {
+		t.Fatal(a)
+	}
+	err = db.Query(`INSERT INTO "unique" VALUES ( '1' ) RETURNING a;`).Rows(&a)
+	if err == nil {
+		t.Fatal(err)
+	}
+	if a != "" {
+		t.Fatal(a)
 	}
 }
 

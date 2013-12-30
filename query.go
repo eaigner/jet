@@ -1,83 +1,88 @@
 package jet
 
-import (
-	"database/sql"
-)
-
-type query struct {
-	db      *Db
-	qo      queryObject
-	id      string
-	query   string
-	args    []interface{}
-	lastErr error
-	stmt    *sql.Stmt
+type jetQuery struct {
+	db    *Db
+	qo    queryObject
+	id    string
+	query string
+	args  []interface{}
 }
 
 // newQuery initiates a new query for the provided query object (either *sql.Tx or *sql.DB)
-func newQuery(qo queryObject, db *Db) *query {
-	return &query{
-		qo: qo,
-		db: db,
-		id: newQueryId(),
+func newQuery(qo queryObject, db *Db, query string, args ...interface{}) *jetQuery {
+	return &jetQuery{
+		qo:    qo,
+		db:    db,
+		id:    newQueryId(),
+		query: query,
+		args:  args,
 	}
 }
 
-func (q *query) Run() error {
-	return q.Rows(nil)
-}
+func (q *jetQuery) processedQna() (string, []interface{}) {
+	query, args := substituteMapAndArrayMarks(q.query, q.args...)
 
-func (q *query) Rows(v interface{}, maxRows ...int64) error {
-	// Always clear the error and close the statement - if it's not handled
-	// by the LRU - after we are done with Rows.
-	defer func() {
-		q.lastErr = nil
-		if q.db.LRUCache == nil && q.stmt != nil {
-			q.stmt.Close()
+	// encode complex args
+	enc := make([]interface{}, 0, len(args))
+	for _, a := range args {
+		v, ok := a.(ComplexValue)
+		if ok {
+			enc = append(enc, v.Encode())
+		} else {
+			enc = append(enc, a)
 		}
-	}()
+	}
+	return query, enc
+}
 
-	// Since Query doesn't return the error directly we do it here
-	if q.lastErr != nil {
-		return q.lastErr
-	}
+func (q *jetQuery) Run() error {
+	query, args := q.processedQna()
 
-	// Determine max rows
-	var max int64 = -1
-	if len(maxRows) > 0 {
-		max = maxRows[0]
+	// prepare
+	stmt, err := q.qo.Prepare(query)
+	if err != nil {
+		return err
 	}
-	var (
-		rows *sql.Rows
-		err  error
-	)
-	if q.db.LogFunc != nil {
-		q.db.LogFunc(q.id, q.query, q.args...)
-	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(args...)
+	return err
+}
+
+func (q *jetQuery) Rows(v interface{}) error {
 	if v == nil {
-		_, err = q.stmt.Exec(q.encodedArgs()...)
-		return q.onErr(err)
-
-	} else {
-		rows, err = q.stmt.Query(q.encodedArgs()...)
-		if err != nil {
-			return q.onErr(err)
-		}
-		defer rows.Close()
+		return q.Run()
 	}
+	query, args := q.processedQna()
+
+	// prepare
+	stmt, err := q.qo.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	// log
+	if q.db.LogFunc != nil {
+		q.db.LogFunc(q.id, query, args...)
+	}
+
+	// run query
+	rows, err := stmt.Query(args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
 	cols, err := rows.Columns()
 	if err != nil {
-		return q.onErr(err)
+		return err
 	}
 	var i int64 = 0
-	mppr := &mapper{
+	colMapper := &mapper{
 		conv: q.db.ColumnConverter,
 	}
 	for {
-		// Check if max rows has been reached
-		if max >= 0 && i >= max {
-			break
-		}
 		// Break if no more rows
 		if !rows.Next() {
 			break
@@ -89,65 +94,15 @@ func (q *query) Rows(v interface{}, maxRows ...int64) error {
 		}
 		err := rows.Scan(cont...)
 		if err != nil {
-			return q.onErr(err)
+			return err
 		}
 
 		// Map values
-		err = mppr.unpack(cols, cont, v)
+		err = colMapper.unpack(cols, cont, v)
 		if err != nil {
-			return q.onErr(err)
+			return err
 		}
 		i++
 	}
 	return nil
-}
-
-func (q *query) encodedArgs() []interface{} {
-	enc := make([]interface{}, 0, len(q.args))
-	for _, a := range q.args {
-		v, ok := a.(ComplexValue)
-		if ok {
-			enc = append(enc, v.Encode())
-		} else {
-			enc = append(enc, a)
-		}
-	}
-	return enc
-}
-
-func (q *query) prepare(query string, args ...interface{}) Runnable {
-	q2, a2 := substituteMapAndArrayMarks(query, args...)
-	q.query = q2
-	q.args = a2
-
-	var stmt *sql.Stmt
-	var lkey string
-	if q.db.LRUCache != nil {
-		lkey = q.id + q.query
-		stmt = q.db.LRUCache.get(lkey)
-	}
-	if stmt == nil {
-		var err error
-		stmt, err = q.qo.Prepare(q.query)
-		if err != nil {
-			q.onErr(err)
-			return q
-		}
-		if q.db.LRUCache != nil {
-			q.db.LRUCache.set(lkey, stmt)
-		}
-	}
-	q.stmt = stmt
-
-	return q
-}
-
-func (q *query) onErr(err error) error {
-	if err != nil {
-		q.lastErr = err
-		if q.db.LRUCache != nil {
-			q.db.LRUCache.reset()
-		}
-	}
-	return err
 }

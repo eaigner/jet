@@ -14,9 +14,9 @@ type Tx struct {
 
 // Query creates a prepared query that can be run with Rows or Run.
 func (tx *Tx) Query(query string, args ...interface{}) Runnable {
-	q := newQuery(tx.tx, tx.db)
+	q := newQuery(tx.tx, tx.db, query, args...)
 	q.id = tx.qid
-	return q.prepare(query, args...)
+	return q
 }
 
 // Commit commits the transaction
