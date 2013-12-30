@@ -31,13 +31,6 @@ func openPg(t *testing.T) *Db {
 	return db
 }
 
-func runSql(t *testing.T, db *Db, sql string) {
-	err := db.Query(sql).Run()
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
 type cx struct {
 	a string
 	b string
@@ -194,8 +187,11 @@ func Test_PgTransaction(t *testing.T) {
 	if err3 == nil {
 		t.Fatal("should return error")
 	}
+
+	// Commit now returns errors
+	// https://github.com/lib/pq/commit/f8ffc32df8b9c5fd7d5ca1ac8345d75e82234edd
 	err = tx.Commit()
-	if err != nil {
+	if err == nil {
 		t.Fatal(err)
 	}
 
@@ -346,26 +342,30 @@ func Test_PgErrors(t *testing.T) {
 func Test_PgUniqueIndex(t *testing.T) {
 	db := openPg(t)
 
-	t.Log("TODO: this test fails due to issue https://github.com/lib/pq/issues/215")
+	run := func(query string) {
+		_, err := db.Exec(query)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 
-	runSql(t, db, `DROP TABLE IF EXISTS "unique"`)
-	runSql(t, db, `CREATE TABLE "unique" ( "a" text )`)
-	runSql(t, db, `CREATE UNIQUE INDEX "ix" ON "unique" ( "a" );`)
+	run(`DROP TABLE IF EXISTS "unique"`)
+	run(`DROP INDEX IF EXISTS "unique_field_ix"`)
+	run(`CREATE TABLE IF NOT EXISTS "unique" ( "field" text )`)
+	run(`CREATE UNIQUE INDEX "unique_field_ix" ON "unique" ( "field" );`)
 
-	var a string
-	err := db.Query(`INSERT INTO "unique" VALUES ( '1' ) RETURNING a;`).Rows(&a)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if a != "1" {
-		t.Fatal(a)
-	}
-	err = db.Query(`INSERT INTO "unique" VALUES ( '1' ) RETURNING a;`).Rows(&a)
-	if err == nil {
-		t.Fatal(err)
-	}
-	if a != "" {
-		t.Fatal(a)
+	for i := 0; i < 2; i++ {
+		err := db.Query(`INSERT INTO "unique" ( "field" ) VALUES ( $1 )`, "banana").Run()
+		switch i {
+		case 1:
+			if err == nil {
+				t.Fatal(err)
+			}
+		default:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 }
 
