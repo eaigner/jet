@@ -54,7 +54,7 @@ func (c *cx) Decode(v interface{}) error {
 	return nil
 }
 
-func Test_ComplexValues(t *testing.T) {
+func TestComplexValues(t *testing.T) {
 	db := openPg(t)
 
 	err := db.Query(`CREATE TABLE complexTest ( a text )`).Run()
@@ -73,7 +73,7 @@ func Test_ComplexValues(t *testing.T) {
 	}
 }
 
-func Test_PgRowUnpack(t *testing.T) {
+func TestPgRowUnpack(t *testing.T) {
 	db := openPg(t)
 	err := db.Query(`DROP TABLE IF EXISTS jetTest`).Run()
 	if err != nil {
@@ -161,7 +161,7 @@ func Test_PgRowUnpack(t *testing.T) {
 	}
 }
 
-func Test_PgTransaction(t *testing.T) {
+func TestPgTransaction(t *testing.T) {
 	db := openPg(t)
 	err := db.Query(`DROP TABLE IF EXISTS "tx_table"`).Run()
 	if err != nil {
@@ -218,7 +218,7 @@ func Test_PgTransaction(t *testing.T) {
 	}
 }
 
-func Test_PgNullValue(t *testing.T) {
+func TestPgNullValue(t *testing.T) {
 	db := openPg(t)
 
 	err := db.Query(`DROP TABLE IF EXISTS jetNullTest`).Run()
@@ -249,7 +249,7 @@ func Test_PgNullValue(t *testing.T) {
 	}
 }
 
-func Test_PgHstoreQuery(t *testing.T) {
+func TestPgHstoreQuery(t *testing.T) {
 	db := openPg(t)
 	err := db.Query(`CREATE EXTENSION IF NOT EXISTS hstore`).Run()
 	if err != nil {
@@ -299,7 +299,7 @@ func Test_PgHstoreQuery(t *testing.T) {
 	}
 }
 
-func Test_PgErrors(t *testing.T) {
+func TestPgErrors(t *testing.T) {
 	db := openPg(t)
 	err := db.Query(`DROP TABLE IF EXISTS "logtest"`).Run()
 	if err != nil {
@@ -339,7 +339,7 @@ func Test_PgErrors(t *testing.T) {
 	}
 }
 
-func Test_PgUniqueIndex(t *testing.T) {
+func TestPgUniqueIndex(t *testing.T) {
 	db := openPg(t)
 
 	run := func(query string) {
@@ -369,7 +369,7 @@ func Test_PgUniqueIndex(t *testing.T) {
 	}
 }
 
-func Test_PgSuite(t *testing.T) {
+func TestPgSuite(t *testing.T) {
 	var s Suite
 	s.AddSQL(
 		`CREATE TABLE "suite_test" ( id serial, name text )`,
@@ -413,7 +413,7 @@ func Test_PgSuite(t *testing.T) {
 	}
 }
 
-func Test_PgSuiteError(t *testing.T) {
+func TestPgSuiteError(t *testing.T) {
 	var s Suite
 	s.AddSQL(`CREATE TABLE flowers (id serial)`, `DROP TABLE flowers`)
 	s.AddSQL(`CREATE TABLE err ors (id serial)`, `DROP TABLE errors`)
