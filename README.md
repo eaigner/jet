@@ -3,7 +3,6 @@ Jet is a super-flexible lightweight SQL interface ([GoDoc](http://godoc.org/gith
 Features:
 
   - En/decode custom types using [ComplexValue](http://godoc.org/github.com/eaigner/jet#ComplexValue)
-  - LRU query cache for superfast queries
   - Unpack query results to any format
   - Can expand queries for map and slice arguments (e.g. `$1` to `$1, $2, $3`, useful for hstore or set membership queries)
   - Serializes hstore columns to maps
