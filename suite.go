@@ -105,28 +105,32 @@ func (s *Suite) Run(db *Db, up bool, maxSteps int) (int, int, error) {
 		if step++; maxSteps > 0 && step > maxSteps {
 			break
 		}
-		txn, err := db.Begin()
+
+		txn, err := db.DB.Begin()
 		if err != nil {
 			return current, stepsApplied, err
 		}
+
 		next := m.id
 		if up {
-			err = txn.Query(m.Up).Run()
+			_, err = txn.Exec(m.Up)
 		} else {
 			next--
-			err = txn.Query(m.Down).Run()
+			_, err = txn.Exec(m.Down)
 		}
 		if err != nil {
 			return current, stepsApplied, err
 		}
+
 		if current == -1 {
-			err = txn.Query(s.Stmts.InsertVersionSQL, next).Run()
+			_, err = txn.Exec(s.Stmts.InsertVersionSQL, next)
 		} else {
-			err = txn.Query(s.Stmts.UpdateVersionSQL, next, current).Run()
+			_, err = txn.Exec(s.Stmts.UpdateVersionSQL, next, current)
 		}
 		if err != nil {
 			return current, stepsApplied, err
 		}
+
 		if err := txn.Commit(); err != nil {
 			return current, stepsApplied, err
 		}

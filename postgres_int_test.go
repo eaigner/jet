@@ -5,6 +5,7 @@ package jet
 
 import (
 	_ "github.com/lib/pq"
+	"strings"
 	"testing"
 	"time"
 )
@@ -14,21 +15,28 @@ func openPg(t *testing.T) *Db {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	db.LogFunc = func(queryId, query string, args ...interface{}) {
 		t.Logf("%s: %s ARG: %v", queryId, query, args)
 	}
-
-	err = db.Query("DROP SCHEMA public CASCADE").Run()
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = db.Query("CREATE SCHEMA public").Run()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	return db
+}
+
+func buildTable(t testing.TB, db *Db, table string, cols ...string) {
+	_, err := db.Exec("DROP TABLE IF EXISTS " + table)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.Exec("CREATE TABLE " + table + " ( " + strings.Join(cols, ", ") + " )")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func runSql(t testing.TB, db *Db, query string, args ...interface{}) {
+	_, err := db.Exec(query, args...)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 type cx struct {
@@ -57,13 +65,10 @@ func (c *cx) Decode(v interface{}) error {
 func TestComplexValues(t *testing.T) {
 	db := openPg(t)
 
-	err := db.Query(`CREATE TABLE complexTest ( a text )`).Run()
-	if err != nil {
-		t.Fatal(err)
-	}
+	buildTable(t, db, "test", "a text")
 
 	var c cx
-	err = db.Query(`INSERT INTO complexTest ( a ) VALUES ( $1 ) RETURNING a`, &cx{"x", "y"}).Rows(&c)
+	err := db.Query(`INSERT INTO test ( a ) VALUES ( $1 ) RETURNING a`, &cx{"x", "y"}).Rows(&c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,19 +80,13 @@ func TestComplexValues(t *testing.T) {
 
 func TestPgRowUnpack(t *testing.T) {
 	db := openPg(t)
-	err := db.Query(`DROP TABLE IF EXISTS jetTest`).Run()
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = db.Query(`CREATE TABLE jetTest ( a VARCHAR(100), b INT )`).Run()
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	t.Log("map unpack")
+	buildTable(t, db, "test", "a varchar(100)", "b integer")
+
+	// map unpack
 
 	var mv map[string]interface{}
-	err = db.Query(`INSERT INTO jetTest ( a, b ) VALUES ( $1, $2 ) RETURNING a`, "hello", 7).Rows(&mv)
+	err := db.Query(`INSERT INTO test ( a, b ) VALUES ( $1, $2 ) RETURNING a`, "hello", 7).Rows(&mv)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,12 +98,12 @@ func TestPgRowUnpack(t *testing.T) {
 		t.Fatal(x)
 	}
 
-	t.Log("struct unpack")
+	// struct unpack
 
 	var sv struct {
 		A string
 	}
-	err = db.Query(`INSERT INTO jetTest ( a, b ) VALUES ( $1, $2 ) RETURNING a`, "hello2", 8).Rows(&sv)
+	err = db.Query(`INSERT INTO test ( a, b ) VALUES ( $1, $2 ) RETURNING a`, "hello2", 8).Rows(&sv)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,13 +111,13 @@ func TestPgRowUnpack(t *testing.T) {
 		t.Fatal(x)
 	}
 
-	t.Log("struct slice unpack")
+	// struct slice unpack
 
 	var sv2 []struct {
 		A string
 		B int16
 	}
-	err = db.Query(`SELECT * FROM jetTest`).Rows(&sv2)
+	err = db.Query(`SELECT * FROM test`).Rows(&sv2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,13 +131,13 @@ func TestPgRowUnpack(t *testing.T) {
 		t.Fatal(x)
 	}
 
-	t.Log("struct slice unpack with limit")
+	// struct slice unpack with limit
 
 	var sv3 []struct {
 		A string
 		B int64
 	}
-	err = db.Query(`SELECT * FROM jetTest`).Rows(&sv3)
+	err = db.Query(`SELECT * FROM test`).Rows(&sv3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,10 +148,10 @@ func TestPgRowUnpack(t *testing.T) {
 		t.Fatal(x)
 	}
 
-	t.Log("single value")
+	// single value
 
 	var b int64
-	err = db.Query(`INSERT INTO jetTest ( a, b ) VALUES ( $1, $2 ) RETURNING b`, "hellov", 101).Rows(&b)
+	err = db.Query(`INSERT INTO test ( a, b ) VALUES ( $1, $2 ) RETURNING b`, "hellov", 101).Rows(&b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,29 +162,24 @@ func TestPgRowUnpack(t *testing.T) {
 
 func TestPgTransaction(t *testing.T) {
 	db := openPg(t)
-	err := db.Query(`DROP TABLE IF EXISTS "tx_table"`).Run()
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = db.Query(`CREATE TABLE "tx_table" ( "a" text, "b" integer )`).Run()
-	if err != nil {
-		t.Fatal(err)
-	}
+
+	buildTable(t, db, "test", `a text`, `b integer`)
+
 	tx, err := db.Begin()
 	if err != nil {
 		t.Fatal(err)
 	}
-	err1 := tx.Query(`INSERT INTO "tx_table" ( "a", "b" ) VALUES ( $1, $2 )`, "hello", 7).Run()
+	err1 := tx.Query(`INSERT INTO "test" ( "a", "b" ) VALUES ( $1, $2 )`, "hello", 7).Run()
 	if err1 != nil {
 		t.Fatal(err1.Error())
 	}
-	err2 := tx.Query(`INSERT INTO "tx_table" ( "a", "b" ) VALUES ( $1, $2 )`, "hello2", time.Now()).Run()
+	err2 := tx.Query(`INSERT INTO "test" ( "a", "b" ) VALUES ( $1, $2 )`, "hello2", time.Now()).Run()
 	if err2 == nil {
-		t.Fatal("should return error")
+		t.Fatal(err2)
 	}
-	err3 := tx.Query(`INSERT INTO "tx_table" ( "a", "b" ) VALUES ( $1, $2 )`, "hello2", "boo").Run()
+	err3 := tx.Query(`INSERT INTO "test" ( "a", "b" ) VALUES ( $1, $2 )`, "hello2", "boo").Run()
 	if err3 == nil {
-		t.Fatal("should return error")
+		t.Fatal(err3)
 	}
 
 	// Commit now returns errors
@@ -200,7 +194,7 @@ func TestPgTransaction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = tx.Query(`INSERT INTO "tx_table" ( "a", "b" ) VALUES ( $1, $2 )`, "roll-me-back", 14).Run()
+	err = tx.Query(`INSERT INTO "test" ( "a", "b" ) VALUES ( $1, $2 )`, "roll-me-back", 14).Run()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +203,7 @@ func TestPgTransaction(t *testing.T) {
 		t.Fatal(err)
 	}
 	var c int64
-	err = db.Query(`SELECT COUNT(*) FROM "tx_table"`).Rows(&c)
+	err = db.Query(`SELECT COUNT(*) FROM "test"`).Rows(&c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,18 +212,74 @@ func TestPgTransaction(t *testing.T) {
 	}
 }
 
+func TestPgLruCache(t *testing.T) {
+	db := openPg(t)
+	db.lru.maxItems = 2
+
+	buildTable(t, db, "test", "a int")
+
+	if x := db.lru.list.Len(); x != 0 {
+		t.Fatal(x)
+	}
+
+	checkLru := func(n int) {
+		if x := db.lru.list.Len(); x != n {
+			t.Fatal(x)
+		}
+		if x := len(db.lru.keys); x != n {
+			t.Fatal(x)
+		}
+	}
+
+	runQuery := func(q string, n int) {
+		for i := 0; i < 5; i++ {
+			err := db.Query(q, i+1).Run()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			checkLru(n)
+
+			stmt, ok := db.lru.get(q)
+			if !ok {
+				t.Fatal(ok)
+			}
+			if stmt == nil {
+				t.Fatal(stmt)
+			}
+		}
+	}
+
+	runQuery("INSERT INTO test ( a ) VALUES ( $1 )", 1)
+	runQuery("DELETE FROM test WHERE a = $1", 2)
+	runQuery("UPDATE test SET ( a ) = ( 888 ) WHERE a = $1", 2)
+
+	// clear cache on error
+
+	query := "INSERT INTO test ( a ) VALUES ( $1 )"
+
+	err := db.Query(query, "NaN").Run()
+	if err == nil {
+		t.Fatal(err)
+	}
+
+	checkLru(1)
+
+	stmt, ok := db.lru.get(query)
+	if ok {
+		t.Fatal(ok)
+	}
+	if stmt != nil {
+		t.Fatal(stmt)
+	}
+}
+
 func TestPgNullValue(t *testing.T) {
 	db := openPg(t)
 
-	err := db.Query(`DROP TABLE IF EXISTS jetNullTest`).Run()
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = db.Query(`CREATE TABLE jetNullTest ( a VARCHAR(100) )`).Run()
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = db.Query(`INSERT INTO jetNullTest ( a ) VALUES ( NULL )`).Run()
+	buildTable(t, db, "test", "a varchar(100)")
+
+	err := db.Query(`INSERT INTO test ( a ) VALUES ( NULL )`).Run()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,7 +287,7 @@ func TestPgNullValue(t *testing.T) {
 	var rows []struct {
 		A string
 	}
-	err = db.Query(`SELECT * FROM jetNullTest`).Rows(&rows)
+	err = db.Query(`SELECT * FROM test`).Rows(&rows)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -251,20 +301,16 @@ func TestPgNullValue(t *testing.T) {
 
 func TestPgHstoreQuery(t *testing.T) {
 	db := openPg(t)
+
 	err := db.Query(`CREATE EXTENSION IF NOT EXISTS hstore`).Run()
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = db.Query(`DROP TABLE IF EXISTS "hstoretable"`).Run()
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = db.Query(`CREATE TABLE "hstoretable" ( "a" text, "b" hstore, "c" text )`).Run()
-	if err != nil {
-		t.Fatal(err)
-	}
+
+	buildTable(t, db, "test", `"a" text`, `"b" hstore`, `"c" text`)
+
 	err = db.Query(
-		`INSERT INTO "hstoretable" VALUES ( $1, hstore(ARRAY[ $2 ]), $3 )`,
+		`INSERT INTO "test" VALUES ( $1, hstore(ARRAY[ $2 ]), $3 )`,
 		"aval",
 		map[string]interface{}{"key1": "val1", "key2": 2},
 		"cval",
@@ -277,7 +323,7 @@ func TestPgHstoreQuery(t *testing.T) {
 		B map[string]interface{}
 		C string
 	}
-	err = db.Query(`SELECT * FROM "hstoretable"`).Rows(&results)
+	err = db.Query(`SELECT * FROM "test"`).Rows(&results)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -299,60 +345,13 @@ func TestPgHstoreQuery(t *testing.T) {
 	}
 }
 
-func TestPgErrors(t *testing.T) {
-	db := openPg(t)
-	err := db.Query(`DROP TABLE IF EXISTS "logtest"`).Run()
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = db.Query(`CREATE TABLE "logtest" ( "id" serial PRIMARY KEY , "text" text )`).Run()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err != nil {
-		t.Fatal(err)
-	}
-	var results []struct {
-		Id   int64
-		Text string
-	}
-	err = db.Query(`SELECT * FROM "logtest" WHERE id = $1`, 1234).Rows(&results)
-	if err != nil { // err should be nil since it was a valid query.
-		t.Fatal(err)
-	}
-	if len(results) != 0 {
-		t.Fatal("no results should be found.")
-	}
-
-	err = db.Query(`SELECT * FROM "logtest" WHERE id = $1`, "hello").Rows(&results)
-	if err == nil { // this query will procude an error.
-		t.Fatal("This should produce an error.")
-	}
-
-	err = db.Query(`SELECT * FROM "logtest" WHERE id = $1`, 5678).Rows(&results)
-	if err != nil { // r.lastErr should be clear and no error should occur.
-		t.Fatal("This should produce an error.")
-	}
-	if len(results) != 0 {
-		t.Fatal("no results should be found.")
-	}
-}
-
 func TestPgUniqueIndex(t *testing.T) {
 	db := openPg(t)
 
-	run := func(query string) {
-		_, err := db.Exec(query)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	run(`DROP TABLE IF EXISTS "unique"`)
-	run(`DROP INDEX IF EXISTS "unique_field_ix"`)
-	run(`CREATE TABLE IF NOT EXISTS "unique" ( "field" text )`)
-	run(`CREATE UNIQUE INDEX "unique_field_ix" ON "unique" ( "field" );`)
+	runSql(t, db, `DROP TABLE IF EXISTS "unique"`)
+	runSql(t, db, `DROP INDEX IF EXISTS "unique_field_ix"`)
+	runSql(t, db, `CREATE TABLE IF NOT EXISTS "unique" ( "field" text )`)
+	runSql(t, db, `CREATE UNIQUE INDEX "unique_field_ix" ON "unique" ( "field" );`)
 
 	for i := 0; i < 2; i++ {
 		err := db.Query(`INSERT INTO "unique" ( "field" ) VALUES ( $1 )`, "banana").Run()
@@ -390,6 +389,10 @@ func TestPgSuite(t *testing.T) {
 
 	db := openPg(t)
 
+	runSql(t, db, "DROP TABLE IF EXISTS migrations")
+	runSql(t, db, "DROP TABLE IF EXISTS suite_test")
+	runSql(t, db, "DROP INDEX IF EXISTS name_index")
+
 	if c, s, err := s.Run(db, true, 0); err != nil || c != 4 || s != 4 {
 		t.Fatal(c, s, err)
 	}
@@ -419,6 +422,10 @@ func TestPgSuiteError(t *testing.T) {
 	s.AddSQL(`CREATE TABLE err ors (id serial)`, `DROP TABLE errors`)
 
 	db := openPg(t)
+
+	runSql(t, db, "DROP TABLE IF EXISTS migrations")
+	runSql(t, db, "DROP TABLE IF EXISTS flowers")
+
 	cur, applied, err := s.Migrate(db)
 
 	if err == nil {
@@ -436,15 +443,10 @@ func TestPgSuiteError(t *testing.T) {
 
 func Benchmark_PgQuery(b *testing.B) {
 	db := openPg(nil)
-	err := db.Query(`DROP TABLE IF EXISTS "benchmark"`).Run()
-	if err != nil {
-		b.Fatal(err)
-	}
-	err = db.Query(`CREATE TABLE "benchmark" ( "a" text, "b" integer )`).Run()
-	if err != nil {
-		b.Fatal(err)
-	}
-	err = db.Query(`INSERT INTO "benchmark" ( "a", "b" ) VALUES ( $1, $2 )`, "benchme!", 9).Run()
+
+	buildTable(b, db, "benchmark", `"a" text`, `"b" integer`)
+
+	err := db.Query(`INSERT INTO "benchmark" ( "a", "b" ) VALUES ( $1, $2 )`, "benchme!", 9).Run()
 	if err != nil {
 		b.Fatal(err)
 	}

@@ -20,6 +20,7 @@ type Db struct {
 
 	driver string
 	source string
+	lru    *lru
 }
 
 // Open opens a new database connection.
@@ -32,6 +33,7 @@ func Open(driverName, dataSourceName string) (*Db, error) {
 		ColumnConverter: SnakeCaseConverter, // default
 		driver:          driverName,
 		source:          dataSourceName,
+		lru:             newLru(),
 	}
 	j.DB = db
 

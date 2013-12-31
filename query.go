@@ -1,6 +1,11 @@
 package jet
 
+import (
+	"sync"
+)
+
 type jetQuery struct {
+	m     sync.Mutex
 	db    *Db
 	qo    queryObject
 	id    string
@@ -19,8 +24,22 @@ func newQuery(qo queryObject, db *Db, query string, args ...interface{}) *jetQue
 	}
 }
 
-func (q *jetQuery) processedQna() (string, []interface{}) {
+func (q *jetQuery) Run() (err error) {
+	return q.Rows(nil)
+}
+
+func (q *jetQuery) Rows(v interface{}) (err error) {
+	q.m.Lock()
+	defer q.m.Unlock()
+
 	query, args := substituteMapAndArrayMarks(q.query, q.args...)
+
+	// clear query from cache on error
+	defer func() {
+		if err != nil {
+			q.db.lru.del(query)
+		}
+	}()
 
 	// encode complex args
 	enc := make([]interface{}, 0, len(args))
@@ -32,39 +51,21 @@ func (q *jetQuery) processedQna() (string, []interface{}) {
 			enc = append(enc, a)
 		}
 	}
-	return query, enc
-}
-
-func (q *jetQuery) Run() error {
-	query, args := q.processedQna()
-
-	// prepare
-	stmt, err := q.qo.Prepare(query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(args...)
-	return err
-}
-
-func (q *jetQuery) Rows(v interface{}) error {
-	if v == nil {
-		return q.Run()
-	}
-	query, args := q.processedQna()
-
-	// prepare
-	stmt, err := q.qo.Prepare(query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
+	args = enc
 
 	// log
 	if q.db.LogFunc != nil {
 		q.db.LogFunc(q.id, query, args...)
+	}
+
+	// prepare statement
+	stmt, ok := q.db.lru.get(query)
+	if !ok {
+		stmt, err = q.qo.Prepare(query)
+		if err != nil {
+			return err
+		}
+		q.db.lru.put(query, stmt)
 	}
 
 	// run query
