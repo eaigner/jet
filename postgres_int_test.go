@@ -272,6 +272,25 @@ func TestPgLruCache(t *testing.T) {
 	if stmt != nil {
 		t.Fatal(stmt)
 	}
+
+	// lru must not be used inside transactions
+	oldLen := db.lru.list.Len()
+
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = tx.Query(query, 99).Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = tx.Commit()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	checkLru(oldLen)
 }
 
 func TestPgNullValue(t *testing.T) {

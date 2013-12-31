@@ -1,6 +1,7 @@
 package jet
 
 import (
+	"database/sql"
 	"sync"
 )
 
@@ -32,11 +33,18 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 	q.m.Lock()
 	defer q.m.Unlock()
 
+	// disable lru in transactions
+	useLru := true
+	switch q.qo.(type) {
+	case *sql.Tx:
+		useLru = false
+	}
+
 	query, args := substituteMapAndArrayMarks(q.query, q.args...)
 
 	// clear query from cache on error
 	defer func() {
-		if err != nil {
+		if useLru && err != nil {
 			q.db.lru.del(query)
 		}
 	}()
@@ -60,12 +68,14 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 
 	// prepare statement
 	stmt, ok := q.db.lru.get(query)
-	if !ok {
+	if !useLru || !ok {
 		stmt, err = q.qo.Prepare(query)
 		if err != nil {
 			return err
 		}
-		q.db.lru.put(query, stmt)
+		if useLru {
+			q.db.lru.put(query, stmt)
+		}
 	}
 
 	// run query
