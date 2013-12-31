@@ -250,13 +250,13 @@ func TestPgLruCache(t *testing.T) {
 		}
 	}
 
-	runQuery("INSERT INTO test ( a ) VALUES ( $1 )", 1)
+	query := "INSERT INTO test ( a ) VALUES ( $1 )"
+
+	runQuery(query, 1)
 	runQuery("DELETE FROM test WHERE a = $1", 2)
 	runQuery("UPDATE test SET ( a ) = ( 888 ) WHERE a = $1", 2)
 
 	// clear cache on error
-
-	query := "INSERT INTO test ( a ) VALUES ( $1 )"
 
 	err := db.Query(query, "NaN").Run()
 	if err == nil {
