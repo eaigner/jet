@@ -40,6 +40,11 @@ func Open(driverName, dataSourceName string) (*Db, error) {
 	return j, nil
 }
 
+// SetMaxCachedStatements sets the max number of statements to cache in the LRU. The default is 500.
+func (db *Db) SetMaxCachedStatements(n int) {
+	db.lru.maxItems = n
+}
+
 // Begin starts a new transaction
 func (db *Db) Begin() (*Tx, error) {
 	qid := newQueryId()
