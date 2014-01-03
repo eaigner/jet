@@ -81,6 +81,7 @@ func (c *lru) clean() {
 
 // makeKey hashes the key to save some bytes
 func makeKey(k string) string {
-	b := sha1.Sum([]byte(k))
-	return string(b[:])
+	buffer := sha1.New()
+	buffer.Write([]byte(k))
+	return string(buffer.Sum(nil))
 }
