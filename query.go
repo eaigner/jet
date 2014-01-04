@@ -78,6 +78,13 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 		}
 	}
 
+	// If NO results are expected then use Exec() rather than Query()
+	// as some drivers (MySql) require this to work properly.
+	if v == nil {
+		_, err := stmt.Exec()
+		return err
+	}
+
 	// run query
 	rows, err := stmt.Query(args...)
 	if err != nil {
