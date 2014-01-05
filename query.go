@@ -78,10 +78,9 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 		}
 	}
 
-	// If NO results are expected then use Exec() rather than Query()
-	// as some drivers (MySql) require this to work properly.
+	// If no rows need to be unpacked use Exec
 	if v == nil {
-		_, err := stmt.Exec()
+		_, err := stmt.Exec(args...)
 		return err
 	}
 
