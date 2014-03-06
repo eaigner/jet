@@ -75,6 +75,8 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 		}
 		if useLru {
 			q.db.lru.put(query, stmt)
+		} else {
+			defer stmt.Close()
 		}
 	}
 
