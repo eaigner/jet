@@ -19,6 +19,11 @@ func (tx *Tx) Query(query string, args ...interface{}) Runnable {
 	return q
 }
 
+// Exec calls Exec on the underlying sql.Tx.
+func (tx *Tx) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return tx.tx.Exec(query, args...)
+}
+
 // Commit commits the transaction
 func (tx *Tx) Commit() error {
 	if tx.db.LogFunc != nil {
