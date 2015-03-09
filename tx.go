@@ -2,6 +2,7 @@ package jet
 
 import (
 	"database/sql"
+	"errors"
 )
 
 // Tx represents a transaction instance.
@@ -21,6 +22,9 @@ func (tx *Tx) Query(query string, args ...interface{}) Runnable {
 
 // Exec calls Exec on the underlying sql.Tx.
 func (tx *Tx) Exec(query string, args ...interface{}) (sql.Result, error) {
+	if tx == nil || tx.tx == nil {
+		return nil, errors.New("jet: Exec called on nil transaction")
+	}
 	return tx.tx.Exec(query, args...)
 }
 
