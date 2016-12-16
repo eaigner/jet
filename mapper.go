@@ -82,6 +82,16 @@ func (m *mapper) unpackStruct(keys []string, values []interface{}, out reflect.V
 			convKey = m.conv.ColumnToFieldName(k)
 		}
 		field := out.FieldByName(convKey)
+
+		// If the field is not found it can mean that we don't want it or that
+		// we have special case like UserID, UUID, userUUID
+		// So fix the name and try again
+		if !field.IsValid() {
+			convKey = strings.Replace(convKey, "Uuid", "UUID", -1)
+			convKey = strings.Replace(convKey, "Id", "ID", -1)
+			field = out.FieldByName(convKey)
+		}
+		
 		if field.IsValid() {
 			m.unpackValue(nil, values[i:i+1], field)
 		}
