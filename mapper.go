@@ -89,6 +89,7 @@ func (m *mapper) unpackStruct(keys []string, values []interface{}, out reflect.V
 		if !field.IsValid() {
 			convKey = strings.Replace(convKey, "Uuid", "UUID", -1)
 			convKey = strings.Replace(convKey, "Id", "ID", -1)
+			convKey = strings.Replace(convKey, "Ip", "IP", -1)
 			field = out.FieldByName(convKey)
 		}
 		
