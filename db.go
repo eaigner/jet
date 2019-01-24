@@ -25,7 +25,12 @@ type Db struct {
 
 // Open opens a new database connection.
 func Open(driverName, dataSourceName string) (*Db, error) {
-	db, err := sql.Open(driverName, dataSourceName)
+	return OpenFunc(driverName, dataSourceName, sql.Open)
+}
+
+// OpenFunc opens a new database connection by using the passed `fn`.
+func OpenFunc(driverName, dataSourceName string, fn func(string, string) (*sql.DB, error)) (*Db, error) {
+	db, err := fn(driverName, dataSourceName)
 	if err != nil {
 		return nil, err
 	}
