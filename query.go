@@ -1,6 +1,7 @@
 package jet
 
 import (
+	"context"
 	"database/sql"
 	"sync"
 )
@@ -12,16 +13,18 @@ type jetQuery struct {
 	id    string
 	query string
 	args  []interface{}
+	ctx   context.Context
 }
 
 // newQuery initiates a new query for the provided query object (either *sql.Tx or *sql.DB)
-func newQuery(qo queryObject, db *Db, query string, args ...interface{}) *jetQuery {
+func newQuery(ctx context.Context, qo queryObject, db *Db, query string, args ...interface{}) *jetQuery {
 	return &jetQuery{
 		qo:    qo,
 		db:    db,
 		id:    newQueryId(),
 		query: query,
 		args:  args,
+		ctx:   ctx,
 	}
 }
 
@@ -32,6 +35,10 @@ func (q *jetQuery) Run() (err error) {
 func (q *jetQuery) Rows(v interface{}) (err error) {
 	q.m.Lock()
 	defer q.m.Unlock()
+
+	if q.ctx == nil {
+		q.ctx = context.Background()
+	}
 
 	// disable lru in transactions
 	useLru := true
@@ -82,12 +89,12 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 
 	// If no rows need to be unpacked use Exec
 	if v == nil {
-		_, err := stmt.Exec(args...)
+		_, err := stmt.ExecContext(q.ctx, args...)
 		return err
 	}
 
 	// run query
-	rows, err := stmt.Query(args...)
+	rows, err := stmt.QueryContext(q.ctx, args...)
 	if err != nil {
 		return err
 	}

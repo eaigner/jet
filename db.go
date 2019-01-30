@@ -1,6 +1,7 @@
 package jet
 
 import (
+	"context"
 	"database/sql"
 )
 
@@ -69,5 +70,10 @@ func (db *Db) Begin() (*Tx, error) {
 
 // Query creates a prepared query that can be run with Rows or Run.
 func (db *Db) Query(query string, args ...interface{}) Runnable {
-	return newQuery(db, db, query, args...)
+	return db.QueryContext(context.Background(), query, args...)
+}
+
+// QueryContext creates a prepared query that can be run with Rows or Run.
+func (db *Db) QueryContext(ctx context.Context, query string, args ...interface{}) Runnable {
+	return newQuery(ctx, db, db, query, args...)
 }
