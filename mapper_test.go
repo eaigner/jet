@@ -73,8 +73,13 @@ func (c *custom) Decode(v interface{}) error {
 	}
 	s, ok := v.(string)
 	if ok {
-		c.a = string(s[0])
-		c.b = string(s[1])
+		if len(s) > 1 {
+			c.a = string(s[0])
+			c.b = string(s[1])
+		} else {
+			c.a = ""
+			c.b = ""
+		}
 	}
 	return nil
 }
@@ -180,6 +185,144 @@ func TestUnpackStruct(t *testing.T) {
 		t.Fatal(v.M)
 	}
 }
+
+func TestUnpackStructExistingValueToEmpty(t *testing.T) {
+	keys := []string{"m"}
+	vals := []interface{}{
+		"",
+	}
+	mppr := &mapper{
+		conv: SnakeCaseConverter,
+	}
+
+	var v struct {
+		M   plainCustom
+	}
+	v.M = "abc"
+
+	err := mppr.unpack(keys, vals, &v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.M != "" {
+		t.Fatal(v.M)
+	}
+}
+
+func TestUnpackStructEmptyToEmpty(t *testing.T) {
+	keys := []string{"m"}
+	vals := []interface{}{
+		"",
+	}
+	mppr := &mapper{
+		conv: SnakeCaseConverter,
+	}
+
+	var v struct {
+		M   plainCustom
+	}
+
+	err := mppr.unpack(keys, vals, &v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.M != "" {
+		t.Fatal(v.M)
+	}
+}
+
+func TestUnpackStructExistingValueToNil(t *testing.T) {
+	keys := []string{"j"}
+	vals := []interface{}{
+		nil,
+	}
+	mppr := &mapper{
+		conv: SnakeCaseConverter,
+	}
+
+	var v struct {
+		J   *custom
+	}
+	v.J = &custom{a: "a", b: "b"}
+
+	err := mppr.unpack(keys, vals, &v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.J != nil {
+		t.Fatal(v.J)
+	}
+}
+
+func TestUnpackStructExistingValueNonPtrToEmpty(t *testing.T) {
+	keys := []string{"j"}
+	vals := []interface{}{
+		"",
+	}
+	mppr := &mapper{
+		conv: SnakeCaseConverter,
+	}
+
+	var v struct {
+		J   custom
+	}
+	v.J = custom{a: "a", b: "b"}
+
+	err := mppr.unpack(keys, vals, &v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.J.a != "" || v.J.b != "" {
+		t.Fatal(v.J)
+	}
+}
+
+func TestUnpackStructComplexExistingValueToEmpty(t *testing.T) {
+	keys := []string{"j"}
+	vals := []interface{}{
+		"",
+	}
+	mppr := &mapper{
+		conv: SnakeCaseConverter,
+	}
+
+	var v struct {
+		J   *custom
+	}
+	v.J = &custom{a: "a", b: "b"}
+
+	err := mppr.unpack(keys, vals, &v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.J != nil {
+		t.Fatal(v.J)
+	}
+}
+
+
+func TestUnpackStructNilComplexToNil(t *testing.T) {
+	keys := []string{"j"}
+	vals := []interface{}{
+		nil,
+	}
+	mppr := &mapper{
+		conv: SnakeCaseConverter,
+	}
+
+	var v struct {
+		J   *custom
+	}
+
+	err := mppr.unpack(keys, vals, &v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.J != nil {
+		t.Fatal(v.J)
+	}
+}
+
 
 func TestUnpackMap(t *testing.T) {
 	keys := []string{"ab_c", "c_d", "e"}
