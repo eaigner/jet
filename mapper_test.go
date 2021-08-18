@@ -301,6 +301,32 @@ func TestUnpackStructComplexExistingValueToEmpty(t *testing.T) {
 }
 
 
+func TestUnpackStructNilLikeDBQuery(t *testing.T) {
+	keys := []string{"j"}
+	vals := make([]interface{}, 0, len(keys))
+	for i := 0; i < cap(vals); i++ {
+		vals = append(vals, new(interface{}))
+	}
+	mppr := &mapper{
+		conv: SnakeCaseConverter,
+	}
+
+	var v struct {
+		J   *custom
+	}
+	v.J = &custom{
+		a: "a", b: "b",
+	}
+
+	err := mppr.unpack(keys, vals, &v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.J != nil {
+		t.Fatal(v.J)
+	}
+}
+
 func TestUnpackStructNilComplexToNil(t *testing.T) {
 	keys := []string{"j"}
 	vals := []interface{}{

@@ -20,10 +20,26 @@ func (m *mapper) unpack(keys []string, values []interface{}, out interface{}) er
 	return m.unpackValue(keys, values, val)
 }
 
+func isNil(val interface{}) bool {
+	if val == nil {
+		return true
+	}
+	if reflect.ValueOf(val).IsZero() {
+		return true
+	}
+	if reflect.ValueOf(val).Kind() == reflect.Ptr {
+		if reflect.ValueOf(val).Elem().Kind() == reflect.Struct || reflect.ValueOf(val).Elem().Kind() == reflect.Interface {
+			return reflect.ValueOf(val).Elem().IsNil()
+		}
+	}
+
+	return false
+}
+
 func (m *mapper) unpackValue(keys []string, values []interface{}, out reflect.Value) error {
 	switch out.Interface().(type) {
 	case ComplexValue:
-		if values[0] == nil || reflect.ValueOf(values[0]).IsZero(){
+		if isNil(values[0]) {
 			if out.IsZero() {
 				return nil
 			}
