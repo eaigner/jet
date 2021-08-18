@@ -23,6 +23,15 @@ func (m *mapper) unpack(keys []string, values []interface{}, out interface{}) er
 func (m *mapper) unpackValue(keys []string, values []interface{}, out reflect.Value) error {
 	switch out.Interface().(type) {
 	case ComplexValue:
+		if values[0] == nil || reflect.ValueOf(values[0]).IsZero(){
+			if out.IsZero() {
+				return nil
+			}
+			if out.CanSet() {
+				out.Set(reflect.Zero(out.Type()))
+				return nil
+			}
+		}
 		if out.IsNil() {
 			out.Set(reflect.New(out.Type().Elem()))
 		}
