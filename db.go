@@ -3,6 +3,7 @@ package jet
 import (
 	"context"
 	"database/sql"
+	"strings"
 )
 
 // LogFunc can be set on the Db instance to allow query logging.
@@ -19,27 +20,29 @@ type Db struct {
 	// Defaults to SnakeCaseConverter.
 	ColumnConverter ColumnConverter
 
-	driver string
-	source string
-	lru    *lru
+	driver            string
+	source            string
+	lru               *lru
+	skipPreparedStmts bool
 }
 
 // Open opens a new database connection.
-func Open(driverName, dataSourceName string) (*Db, error) {
-	return OpenFunc(driverName, dataSourceName, sql.Open)
+func Open(driverName, dataSourceName string, preparedStmtCacheSize int) (*Db, error) {
+	return OpenFunc(driverName, dataSourceName, sql.Open, preparedStmtCacheSize)
 }
 
 // OpenFunc opens a new database connection by using the passed `fn`.
-func OpenFunc(driverName, dataSourceName string, fn func(string, string) (*sql.DB, error)) (*Db, error) {
+func OpenFunc(driverName, dataSourceName string, fn func(string, string) (*sql.DB, error), preparedStmtCacheSize int) (*Db, error) {
 	db, err := fn(driverName, dataSourceName)
 	if err != nil {
 		return nil, err
 	}
 	j := &Db{
-		ColumnConverter: SnakeCaseConverter, // default
-		driver:          driverName,
-		source:          dataSourceName,
-		lru:             newLru(),
+		ColumnConverter:   SnakeCaseConverter, // default
+		driver:            driverName,
+		source:            dataSourceName,
+		lru:               newLru(preparedStmtCacheSize),
+		skipPreparedStmts: strings.Contains(dataSourceName, "interpolateParams=true"),
 	}
 	j.DB = db
 
@@ -75,5 +78,5 @@ func (db *Db) Query(query string, args ...interface{}) Runnable {
 
 // QueryContext creates a prepared query that can be run with Rows or Run.
 func (db *Db) QueryContext(ctx context.Context, query string, args ...interface{}) Runnable {
-	return newQuery(ctx, db, db, query, args...)
+	return newQuery(ctx, db.skipPreparedStmts, db, db, query, args...)
 }

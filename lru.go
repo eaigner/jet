@@ -19,9 +19,9 @@ type lruItem struct {
 	stmt *sql.Stmt
 }
 
-func newLru() *lru {
+func newLru(maxItems int) *lru {
 	return &lru{
-		maxItems: 500,
+		maxItems: maxItems,
 		keys:     make(map[string]*list.Element),
 		list:     list.New(),
 	}
