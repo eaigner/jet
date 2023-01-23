@@ -80,3 +80,7 @@ func (db *Db) Query(query string, args ...interface{}) Runnable {
 func (db *Db) QueryContext(ctx context.Context, query string, args ...interface{}) Runnable {
 	return newQuery(ctx, db.skipPreparedStmts, db, db, query, args...)
 }
+
+func (db *Db) CacheSize() int {
+	return db.lru.size()
+}

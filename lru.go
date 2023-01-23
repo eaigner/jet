@@ -79,6 +79,10 @@ func (c *lru) clean() {
 	}
 }
 
+func (c *lru) size() int {
+	return c.list.Len()
+}
+
 // makeKey hashes the key to save some bytes
 func makeKey(k string) string {
 	buffer := sha1.New()
