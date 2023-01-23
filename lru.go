@@ -19,9 +19,9 @@ type lruItem struct {
 	stmt *sql.Stmt
 }
 
-func newLru() *lru {
+func newLru(maxItems int) *lru {
 	return &lru{
-		maxItems: 500,
+		maxItems: maxItems,
 		keys:     make(map[string]*list.Element),
 		list:     list.New(),
 	}
@@ -77,6 +77,10 @@ func (c *lru) clean() {
 			c.delElem(c.list.Back())
 		}
 	}
+}
+
+func (c *lru) size() int {
+	return c.list.Len()
 }
 
 // makeKey hashes the key to save some bytes
