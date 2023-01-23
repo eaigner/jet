@@ -3,7 +3,6 @@ package jet
 import (
 	"context"
 	"database/sql"
-	"strings"
 )
 
 // LogFunc can be set on the Db instance to allow query logging.
@@ -27,12 +26,12 @@ type Db struct {
 }
 
 // Open opens a new database connection.
-func Open(driverName, dataSourceName string, preparedStmtCacheSize int) (*Db, error) {
-	return OpenFunc(driverName, dataSourceName, sql.Open, preparedStmtCacheSize)
+func Open(driverName, dataSourceName string, usePreparedStmts bool, preparedStmtCacheSize int) (*Db, error) {
+	return OpenFunc(driverName, dataSourceName, sql.Open, usePreparedStmts, preparedStmtCacheSize)
 }
 
 // OpenFunc opens a new database connection by using the passed `fn`.
-func OpenFunc(driverName, dataSourceName string, fn func(string, string) (*sql.DB, error), preparedStmtCacheSize int) (*Db, error) {
+func OpenFunc(driverName, dataSourceName string, fn func(string, string) (*sql.DB, error), usePreparedStmts bool, preparedStmtCacheSize int) (*Db, error) {
 	db, err := fn(driverName, dataSourceName)
 	if err != nil {
 		return nil, err
@@ -42,7 +41,7 @@ func OpenFunc(driverName, dataSourceName string, fn func(string, string) (*sql.D
 		driver:            driverName,
 		source:            dataSourceName,
 		lru:               newLru(preparedStmtCacheSize),
-		skipPreparedStmts: strings.Contains(dataSourceName, "interpolateParams=true"),
+		skipPreparedStmts: usePreparedStmts,
 	}
 	j.DB = db
 
