@@ -80,11 +80,11 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 
 	if q.db.NoPreparedStmts() {
 		if v == nil {
-			_, err := q.db.DB.ExecContext(q.ctx, query, args...)
+			_, err := q.qo.ExecContext(q.ctx, query, args...)
 			return err
 		}
 
-		rows, err = q.db.DB.QueryContext(q.ctx, query, args...)
+		rows, err = q.qo.QueryContext(q.ctx, query, args...)
 	} else {
 		if useLru {
 			stmt, ok = q.db.lru.get(query)

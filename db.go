@@ -79,7 +79,7 @@ func (db *Db) Query(query string, args ...interface{}) Runnable {
 
 // QueryContext creates a prepared query that can be run with Rows or Run.
 func (db *Db) QueryContext(ctx context.Context, query string, args ...interface{}) Runnable {
-	return newQuery(ctx, db, db, query, args...)
+	return newQuery(ctx, db.DB, db, query, args...)
 }
 
 func (db *Db) CacheSize() int {
