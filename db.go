@@ -79,9 +79,17 @@ func (db *Db) Query(query string, args ...interface{}) Runnable {
 
 // QueryContext creates a prepared query that can be run with Rows or Run.
 func (db *Db) QueryContext(ctx context.Context, query string, args ...interface{}) Runnable {
-	return newQuery(ctx, db.usePreparedStmtCache, db.noPreparedStmts, db, db, query, args...)
+	return newQuery(ctx, db, db, query, args...)
 }
 
 func (db *Db) CacheSize() int {
 	return db.lru.size()
+}
+
+func (db *Db) UsePreparedStmtsCache() bool {
+	return db.usePreparedStmtCache
+}
+
+func (db *Db) NoPreparedStmts() bool {
+	return db.noPreparedStmts
 }

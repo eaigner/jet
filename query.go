@@ -7,28 +7,24 @@ import (
 )
 
 type jetQuery struct {
-	m                    sync.Mutex
-	db                   *Db
-	qo                   queryObject
-	id                   string
-	query                string
-	args                 []interface{}
-	ctx                  context.Context
-	usePreparedStmtCache bool
-	noPreparedStmts      bool
+	m     sync.Mutex
+	db    *Db
+	qo    queryObject
+	id    string
+	query string
+	args  []interface{}
+	ctx   context.Context
 }
 
 // newQuery initiates a new query for the provided query object (either *sql.Tx or *sql.DB)
-func newQuery(ctx context.Context, usePreparedStmtCache bool, noPreparedStmts bool, qo queryObject, db *Db, query string, args ...interface{}) *jetQuery {
+func newQuery(ctx context.Context, qo queryObject, db *Db, query string, args ...interface{}) *jetQuery {
 	return &jetQuery{
-		qo:                   qo,
-		db:                   db,
-		id:                   newQueryId(),
-		query:                query,
-		args:                 args,
-		ctx:                  ctx,
-		usePreparedStmtCache: usePreparedStmtCache,
-		noPreparedStmts:      noPreparedStmts,
+		qo:    qo,
+		db:    db,
+		id:    newQueryId(),
+		query: query,
+		args:  args,
+		ctx:   ctx,
 	}
 }
 
@@ -45,7 +41,7 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 	}
 
 	// disable lru in transactions
-	useLru := q.usePreparedStmtCache
+	useLru := q.db.UsePreparedStmtsCache()
 	switch q.qo.(type) {
 	case *sql.Tx:
 		useLru = false
@@ -82,7 +78,7 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 	var ok bool
 	var stmt *sql.Stmt
 
-	if q.noPreparedStmts {
+	if q.db.NoPreparedStmts() {
 		if v == nil {
 			_, err := q.db.DB.ExecContext(q.ctx, query, args...)
 			return err
