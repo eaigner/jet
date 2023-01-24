@@ -7,26 +7,26 @@ import (
 )
 
 type jetQuery struct {
-	m                 sync.Mutex
-	db                *Db
-	qo                queryObject
-	id                string
-	query             string
-	args              []interface{}
-	ctx               context.Context
-	skipPreparedStmts bool
+	m                    sync.Mutex
+	db                   *Db
+	qo                   queryObject
+	id                   string
+	query                string
+	args                 []interface{}
+	ctx                  context.Context
+	disablePreparedStmts bool
 }
 
 // newQuery initiates a new query for the provided query object (either *sql.Tx or *sql.DB)
-func newQuery(ctx context.Context, skipPreparedStmts bool, qo queryObject, db *Db, query string, args ...interface{}) *jetQuery {
+func newQuery(ctx context.Context, disablePreparedStmts bool, qo queryObject, db *Db, query string, args ...interface{}) *jetQuery {
 	return &jetQuery{
-		qo:                qo,
-		db:                db,
-		id:                newQueryId(),
-		query:             query,
-		args:              args,
-		ctx:               ctx,
-		skipPreparedStmts: skipPreparedStmts,
+		qo:                   qo,
+		db:                   db,
+		id:                   newQueryId(),
+		query:                query,
+		args:                 args,
+		ctx:                  ctx,
+		disablePreparedStmts: disablePreparedStmts,
 	}
 }
 
@@ -48,7 +48,7 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 	case *sql.Tx:
 		useLru = false
 	}
-	if q.skipPreparedStmts {
+	if q.disablePreparedStmts {
 		useLru = false
 	}
 
@@ -80,7 +80,7 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 
 	// prepare statement
 	var rows *sql.Rows
-	if q.skipPreparedStmts {
+	if q.disablePreparedStmts {
 		conn, err := q.db.DB.Conn(q.ctx)
 		if err != nil {
 			return err
