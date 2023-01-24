@@ -22,16 +22,17 @@ type Db struct {
 	driver               string
 	source               string
 	lru                  *lru
-	disablePreparedStmts bool
+	usePreparedStmtCache bool
+	noPreparedStmts      bool
 }
 
 // Open opens a new database connection.
-func Open(driverName, dataSourceName string, disablePreparedStmts bool, preparedStmtCacheSize int) (*Db, error) {
-	return OpenFunc(driverName, dataSourceName, sql.Open, disablePreparedStmts, preparedStmtCacheSize)
+func Open(driverName, dataSourceName string, preparedStmtCacheSize int, noPreparedStmts bool) (*Db, error) {
+	return OpenFunc(driverName, dataSourceName, sql.Open, preparedStmtCacheSize, noPreparedStmts)
 }
 
 // OpenFunc opens a new database connection by using the passed `fn`.
-func OpenFunc(driverName, dataSourceName string, fn func(string, string) (*sql.DB, error), disablePreparedStmts bool, preparedStmtCacheSize int) (*Db, error) {
+func OpenFunc(driverName, dataSourceName string, fn func(string, string) (*sql.DB, error), preparedStmtCacheSize int, noPreparedStmts bool) (*Db, error) {
 	db, err := fn(driverName, dataSourceName)
 	if err != nil {
 		return nil, err
@@ -41,7 +42,8 @@ func OpenFunc(driverName, dataSourceName string, fn func(string, string) (*sql.D
 		driver:               driverName,
 		source:               dataSourceName,
 		lru:                  newLru(preparedStmtCacheSize),
-		disablePreparedStmts: disablePreparedStmts,
+		usePreparedStmtCache: preparedStmtCacheSize > 0,
+		noPreparedStmts:      noPreparedStmts,
 	}
 	j.DB = db
 
@@ -77,7 +79,7 @@ func (db *Db) Query(query string, args ...interface{}) Runnable {
 
 // QueryContext creates a prepared query that can be run with Rows or Run.
 func (db *Db) QueryContext(ctx context.Context, query string, args ...interface{}) Runnable {
-	return newQuery(ctx, db.disablePreparedStmts, db, db, query, args...)
+	return newQuery(ctx, db.usePreparedStmtCache, db.noPreparedStmts, db, db, query, args...)
 }
 
 func (db *Db) CacheSize() int {
