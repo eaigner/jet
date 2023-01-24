@@ -1,7 +1,9 @@
 package jet
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 )
 
 // Tx represents a transaction instance.
@@ -14,9 +16,22 @@ type Tx struct {
 
 // Query creates a prepared query that can be run with Rows or Run.
 func (tx *Tx) Query(query string, args ...interface{}) Runnable {
-	q := newQuery(tx.tx, tx.db, query, args...)
+	return tx.QueryContext(context.Background(), query, args...)
+}
+
+// QueryContext creates a prepared query that can be run with Rows or Run.
+func (tx *Tx) QueryContext(ctx context.Context, query string, args ...interface{}) Runnable {
+	q := newQuery(ctx, tx.tx, tx.db, query, args...)
 	q.id = tx.qid
 	return q
+}
+
+// Exec calls Exec on the underlying sql.Tx.
+func (tx *Tx) Exec(query string, args ...interface{}) (sql.Result, error) {
+	if tx == nil || tx.tx == nil {
+		return nil, errors.New("jet: Exec called on nil transaction")
+	}
+	return tx.tx.Exec(query, args...)
 }
 
 // Commit commits the transaction

@@ -1,27 +1,32 @@
 package jet
 
 import (
+	"context"
 	"database/sql"
 	"sync"
 )
 
 type jetQuery struct {
-	m     sync.Mutex
-	db    *Db
-	qo    queryObject
-	id    string
-	query string
-	args  []interface{}
+	m                 sync.Mutex
+	db                *Db
+	qo                queryObject
+	id                string
+	query             string
+	args              []interface{}
+	ctx               context.Context
+	skipPreparedStmts bool
 }
 
 // newQuery initiates a new query for the provided query object (either *sql.Tx or *sql.DB)
-func newQuery(qo queryObject, db *Db, query string, args ...interface{}) *jetQuery {
+func newQuery(ctx context.Context, skipPreparedStmts bool, qo queryObject, db *Db, query string, args ...interface{}) *jetQuery {
 	return &jetQuery{
-		qo:    qo,
-		db:    db,
-		id:    newQueryId(),
-		query: query,
-		args:  args,
+		qo:                qo,
+		db:                db,
+		id:                newQueryId(),
+		query:             query,
+		args:              args,
+		ctx:               ctx,
+		skipPreparedStmts: skipPreparedStmts,
 	}
 }
 
@@ -33,10 +38,17 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 	q.m.Lock()
 	defer q.m.Unlock()
 
+	if q.ctx == nil {
+		q.ctx = context.Background()
+	}
+
 	// disable lru in transactions
 	useLru := true
 	switch q.qo.(type) {
 	case *sql.Tx:
+		useLru = false
+	}
+	if q.skipPreparedStmts {
 		useLru = false
 	}
 
@@ -67,28 +79,47 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 	}
 
 	// prepare statement
-	stmt, ok := q.db.lru.get(query)
-	if !useLru || !ok {
-		stmt, err = q.qo.Prepare(query)
+	var rows *sql.Rows
+	if q.skipPreparedStmts {
+		conn, err := q.db.DB.Conn(q.ctx)
 		if err != nil {
 			return err
 		}
-		if useLru {
-			q.db.lru.put(query, stmt)
+		defer conn.Close()
+
+		if v == nil {
+			_, err := conn.ExecContext(q.ctx, query, args...)
+			return err
 		}
+
+		rows, err = conn.QueryContext(q.ctx, query, args...)
+	} else {
+		stmt, ok := q.db.lru.get(query)
+		if !useLru || !ok {
+			stmt, err = q.qo.Prepare(query)
+			if err != nil {
+				return err
+			}
+			if useLru {
+				q.db.lru.put(query, stmt)
+			} else {
+				defer stmt.Close()
+			}
+		}
+		// If no rows need to be unpacked use Exec
+		if v == nil {
+			_, err := stmt.ExecContext(q.ctx, args...)
+			return err
+		}
+
+		// run query
+		rows, err = stmt.QueryContext(q.ctx, args...)
+		if err != nil {
+			return err
+		}
+
 	}
 
-	// If no rows need to be unpacked use Exec
-	if v == nil {
-		_, err := stmt.Exec(args...)
-		return err
-	}
-
-	// run query
-	rows, err := stmt.Query(args...)
-	if err != nil {
-		return err
-	}
 	defer rows.Close()
 
 	cols, err := rows.Columns()

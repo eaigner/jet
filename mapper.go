@@ -20,9 +20,34 @@ func (m *mapper) unpack(keys []string, values []interface{}, out interface{}) er
 	return m.unpackValue(keys, values, val)
 }
 
+func isNil(val interface{}) bool {
+	if val == nil {
+		return true
+	}
+	if reflect.ValueOf(val).IsZero() {
+		return true
+	}
+	if reflect.ValueOf(val).Kind() == reflect.Ptr {
+		if reflect.ValueOf(val).Elem().Kind() == reflect.Struct || reflect.ValueOf(val).Elem().Kind() == reflect.Interface {
+			return reflect.ValueOf(val).Elem().IsNil()
+		}
+	}
+
+	return false
+}
+
 func (m *mapper) unpackValue(keys []string, values []interface{}, out reflect.Value) error {
 	switch out.Interface().(type) {
 	case ComplexValue:
+		if isNil(values[0]) {
+			if out.IsZero() {
+				return nil
+			}
+			if out.CanSet() {
+				out.Set(reflect.Zero(out.Type()))
+				return nil
+			}
+		}
 		if out.IsNil() {
 			out.Set(reflect.New(out.Type().Elem()))
 		}
@@ -82,6 +107,18 @@ func (m *mapper) unpackStruct(keys []string, values []interface{}, out reflect.V
 			convKey = m.conv.ColumnToFieldName(k)
 		}
 		field := out.FieldByName(convKey)
+
+		// If the field is not found it can mean that we don't want it or that
+		// we have special case like UserID, UUID, userUUID
+		// So fix the name and try again
+		if !field.IsValid() {
+			convKey = strings.Replace(convKey, "Uuid", "UUID", -1)
+			convKey = strings.Replace(convKey, "Id", "ID", -1)
+			convKey = strings.Replace(convKey, "Ip", "IP", -1)
+			convKey = strings.Replace(convKey, "Url", "URL", -1)
+			field = out.FieldByName(convKey)
+		}
+		
 		if field.IsValid() {
 			m.unpackValue(nil, values[i:i+1], field)
 		}

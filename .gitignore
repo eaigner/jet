@@ -25,3 +25,5 @@ cpu.out
 
 *.sublime-project
 *.sublime-workspace
+
+.idea
