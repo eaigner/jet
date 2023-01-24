@@ -15,10 +15,11 @@ type jetQuery struct {
 	args                 []interface{}
 	ctx                  context.Context
 	usePreparedStmtCache bool
+	noPreparedStmts      bool
 }
 
 // newQuery initiates a new query for the provided query object (either *sql.Tx or *sql.DB)
-func newQuery(ctx context.Context, usePreparedStmtCache bool, qo queryObject, db *Db, query string, args ...interface{}) *jetQuery {
+func newQuery(ctx context.Context, usePreparedStmtCache bool, noPreparedStmts bool, qo queryObject, db *Db, query string, args ...interface{}) *jetQuery {
 	return &jetQuery{
 		qo:                   qo,
 		db:                   db,
@@ -27,6 +28,7 @@ func newQuery(ctx context.Context, usePreparedStmtCache bool, qo queryObject, db
 		args:                 args,
 		ctx:                  ctx,
 		usePreparedStmtCache: usePreparedStmtCache,
+		noPreparedStmts:      noPreparedStmts,
 	}
 }
 
@@ -76,33 +78,43 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 	}
 
 	// prepare statement
+	var rows *sql.Rows
 	var ok bool
 	var stmt *sql.Stmt
 
-	if useLru {
-		stmt, ok = q.db.lru.get(query)
-	}
-	if !ok {
-		stmt, err = q.qo.Prepare(query)
+	if q.noPreparedStmts {
+		if v == nil {
+			_, err := q.db.DB.ExecContext(q.ctx, query, args...)
+			return err
+		}
+
+		rows, err = q.db.DB.QueryContext(q.ctx, query, args...)
+	} else {
+		if useLru {
+			stmt, ok = q.db.lru.get(query)
+		}
+		if !ok {
+			stmt, err = q.qo.Prepare(query)
+			if err != nil {
+				return err
+			}
+			if useLru {
+				q.db.lru.put(query, stmt)
+			} else {
+				defer stmt.Close()
+			}
+		}
+		// If no rows need to be unpacked use Exec
+		if v == nil {
+			_, err := stmt.ExecContext(q.ctx, args...)
+			return err
+		}
+
+		// run query
+		rows, err = stmt.QueryContext(q.ctx, args...)
 		if err != nil {
 			return err
 		}
-		if useLru {
-			q.db.lru.put(query, stmt)
-		} else {
-			defer stmt.Close()
-		}
-	}
-	// If no rows need to be unpacked use Exec
-	if v == nil {
-		_, err := stmt.ExecContext(q.ctx, args...)
-		return err
-	}
-
-	// run query
-	rows, err := stmt.QueryContext(q.ctx, args...)
-	if err != nil {
-		return err
 	}
 
 	defer rows.Close()
