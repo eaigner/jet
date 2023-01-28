@@ -3,6 +3,7 @@ package jet
 import (
 	"context"
 	"database/sql"
+	"github.com/jmoiron/sqlx"
 )
 
 type Runnable interface {
@@ -13,8 +14,8 @@ type Runnable interface {
 }
 
 type queryObject interface {
-	Prepare(query string) (*sql.Stmt, error)
-	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	Preparex(query string) (*sqlx.Stmt, error)
+	QueryxContext(ctx context.Context, query string, args ...any) (*sqlx.Rows, error)
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 }
 

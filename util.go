@@ -27,3 +27,11 @@ func newAlphanumericId(length int) string {
 	}
 	return string(buf)
 }
+
+type Closer interface {
+	Close() error
+}
+
+func closeQuietly(closer Closer) {
+	_ = closer.Close()
+}

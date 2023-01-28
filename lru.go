@@ -3,7 +3,7 @@ package jet
 import (
 	"container/list"
 	"crypto/sha1"
-	"database/sql"
+	"github.com/jmoiron/sqlx"
 	"sync"
 )
 
@@ -16,7 +16,7 @@ type lru struct {
 
 type lruItem struct {
 	key  string
-	stmt *sql.Stmt
+	stmt *sqlx.Stmt
 }
 
 func newLru(maxItems int) *lru {
@@ -27,7 +27,7 @@ func newLru(maxItems int) *lru {
 	}
 }
 
-func (c *lru) get(k string) (*sql.Stmt, bool) {
+func (c *lru) get(k string) (*sqlx.Stmt, bool) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	k = makeKey(k)
@@ -38,7 +38,7 @@ func (c *lru) get(k string) (*sql.Stmt, bool) {
 	return nil, false
 }
 
-func (c *lru) put(k string, stmt *sql.Stmt) {
+func (c *lru) put(k string, stmt *sqlx.Stmt) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	k = makeKey(k)
@@ -66,7 +66,7 @@ func (c *lru) del(k string) {
 
 func (c *lru) delElem(e *list.Element) {
 	item := c.list.Remove(e).(*lruItem)
-	defer item.stmt.Close()
+	defer closeQuietly(item.stmt)
 	delete(c.keys, item.key)
 }
 

@@ -2,7 +2,7 @@ package jet
 
 import (
 	"context"
-	"database/sql"
+	"github.com/jmoiron/sqlx"
 	"sync"
 )
 
@@ -43,7 +43,7 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 	// disable lru in transactions
 	useLru := q.db.UsePreparedStmtsCache()
 	switch q.qo.(type) {
-	case *sql.Tx:
+	case *sqlx.Tx:
 		useLru = false
 	}
 
@@ -69,14 +69,12 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 	args = enc
 
 	// log
-	if q.db.LogFunc != nil {
-		q.db.LogFunc(q.id, query, args...)
-	}
+	q.db.LogFunc(q.ctx, q.id, query, args...)
 
 	// prepare statement
-	var rows *sql.Rows
+	var rows *sqlx.Rows
 	var ok bool
-	var stmt *sql.Stmt
+	var stmt *sqlx.Stmt
 
 	if q.db.NoPreparedStmts() {
 		if v == nil {
@@ -84,20 +82,20 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 			return err
 		}
 
-		rows, err = q.qo.QueryContext(q.ctx, query, args...)
+		rows, err = q.qo.QueryxContext(q.ctx, query, args...)
 	} else {
 		if useLru {
 			stmt, ok = q.db.lru.get(query)
 		}
 		if !ok {
-			stmt, err = q.qo.Prepare(query)
+			stmt, err = q.qo.Preparex(query)
 			if err != nil {
 				return err
 			}
 			if useLru {
 				q.db.lru.put(query, stmt)
 			} else {
-				defer stmt.Close()
+				defer closeQuietly(stmt)
 			}
 		}
 		// If no rows need to be unpacked use Exec
@@ -107,13 +105,13 @@ func (q *jetQuery) Rows(v interface{}) (err error) {
 		}
 
 		// run query
-		rows, err = stmt.QueryContext(q.ctx, args...)
+		rows, err = stmt.QueryxContext(q.ctx, args...)
 		if err != nil {
 			return err
 		}
 	}
 
-	defer rows.Close()
+	defer closeQuietly(rows)
 
 	cols, err := rows.Columns()
 	if err != nil {

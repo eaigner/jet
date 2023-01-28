@@ -2,14 +2,11 @@ package jet
 
 import (
 	"context"
-	"database/sql"
+	"github.com/jmoiron/sqlx"
 )
 
-// LogFunc can be set on the Db instance to allow query logging.
-type LogFunc func(queryId, query string, args ...interface{})
-
 type Db struct {
-	*sql.DB
+	*sqlx.DB
 
 	// LogFunc is the log function to use for query logging.
 	// Defaults to nil.
@@ -19,35 +16,37 @@ type Db struct {
 	// Defaults to SnakeCaseConverter.
 	ColumnConverter ColumnConverter
 
-	driver               string
-	source               string
 	lru                  *lru
 	usePreparedStmtCache bool
 	noPreparedStmts      bool
 }
 
+func Wrap(datasource *sqlx.DB, preparedStmtCacheSize int, noPreparedStmts bool) (*Db, error) {
+	j := &Db{
+		ColumnConverter:      SnakeCaseConverter, // default
+		DB:                   datasource,
+		lru:                  newLru(preparedStmtCacheSize),
+		usePreparedStmtCache: preparedStmtCacheSize > 0,
+		noPreparedStmts:      noPreparedStmts,
+		LogFunc:              NoopLogFunc,
+	}
+
+	return j, nil
+}
+
 // Open opens a new database connection.
 func Open(driverName, dataSourceName string, preparedStmtCacheSize int, noPreparedStmts bool) (*Db, error) {
-	return OpenFunc(driverName, dataSourceName, sql.Open, preparedStmtCacheSize, noPreparedStmts)
+	return OpenFunc(driverName, dataSourceName, sqlx.Open, preparedStmtCacheSize, noPreparedStmts)
 }
 
 // OpenFunc opens a new database connection by using the passed `fn`.
-func OpenFunc(driverName, dataSourceName string, fn func(string, string) (*sql.DB, error), preparedStmtCacheSize int, noPreparedStmts bool) (*Db, error) {
+func OpenFunc(driverName, dataSourceName string, fn func(string, string) (*sqlx.DB, error), preparedStmtCacheSize int, noPreparedStmts bool) (*Db, error) {
 	db, err := fn(driverName, dataSourceName)
 	if err != nil {
 		return nil, err
 	}
-	j := &Db{
-		ColumnConverter:      SnakeCaseConverter, // default
-		driver:               driverName,
-		source:               dataSourceName,
-		lru:                  newLru(preparedStmtCacheSize),
-		usePreparedStmtCache: preparedStmtCacheSize > 0,
-		noPreparedStmts:      noPreparedStmts,
-	}
-	j.DB = db
 
-	return j, nil
+	return Wrap(db, preparedStmtCacheSize, noPreparedStmts)
 }
 
 // SetMaxCachedStatements sets the max number of statements to cache in the LRU. The default is 500.
@@ -58,10 +57,9 @@ func (db *Db) SetMaxCachedStatements(n int) {
 // Begin starts a new transaction
 func (db *Db) Begin() (*Tx, error) {
 	qid := newQueryId()
-	if db.LogFunc != nil {
-		db.LogFunc(qid, "BEGIN")
-	}
-	tx, err := db.DB.Begin()
+	db.LogFunc(context.Background(), qid, "BEGIN")
+
+	tx, err := db.DB.Beginx()
 	if err != nil {
 		return nil, err
 	}
